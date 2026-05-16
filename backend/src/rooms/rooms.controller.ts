@@ -2,12 +2,14 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Param,
   Body,
   Query,
 } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
-import { CreateRoomSchema, CreateRoomDto } from './dto/rooms.dto';
+import { CreateRoomSchema, CreateRoomDto, UpdateRoomSchema, UpdateRoomDto } from './dto/rooms.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtPayload } from '../common/types';
@@ -24,6 +26,20 @@ export class RoomsController {
   @Get()
   getActiveRooms(@Query('type') type?: string) {
     return this.roomsService.getActiveRooms(type);
+  }
+
+  @Patch(':id')
+  updateRoom(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(UpdateRoomSchema)) dto: UpdateRoomDto,
+  ) {
+    return this.roomsService.updateRoom(user.sub, id, dto);
+  }
+
+  @Delete(':id')
+  deleteRoom(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.roomsService.deleteRoom(user.sub, id);
   }
 
   @Get(':id')

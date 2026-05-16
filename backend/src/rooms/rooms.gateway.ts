@@ -61,9 +61,18 @@ async handleDisconnect(client: Socket) {
   const userId = client.data.userId;
   if (!userId) return;
 
-  // Build a snapshot of rooms to leave, then iterate sequentially with await.
-  // forEach with async callbacks doesn't await — errors get swallowed and
-  // ghost participants accumulate when network drops mid-session.
+  // Remove this socket first. If the user still has other active sockets
+  // (e.g., reconnecting after page refresh), don't leave rooms — the new
+  // socket is already there. This prevents a race where the old disconnect
+  // handler leaves a room that the new socket just joined.
+  const sockets = this.userSocketMap.get(userId);
+  if (sockets) {
+    sockets.delete(client.id);
+    if (sockets.size > 0) return;
+    this.userSocketMap.delete(userId);
+  }
+
+  // No more sockets for this user — leave all rooms
   const roomsToLeave: string[] = [];
   this.roomUserMap.forEach((users, roomId) => {
     if (users.has(userId)) roomsToLeave.push(roomId);
@@ -84,12 +93,6 @@ async handleDisconnect(client: Socket) {
 
     this.server.to(roomId).emit('participant_left', { userId });
     this.server.to(roomId).emit('participant_count', { count: users.size });
-  }
-
-  const sockets = this.userSocketMap.get(userId);
-  if (sockets) {
-    sockets.delete(client.id);
-    if (sockets.size === 0) this.userSocketMap.delete(userId);
   }
 }
 

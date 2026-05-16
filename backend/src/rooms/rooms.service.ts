@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CreateRoomDto } from './dto/rooms.dto';
+import { CreateRoomDto, UpdateRoomDto } from './dto/rooms.dto';
 
 @Injectable()
 export class RoomsService {
@@ -169,6 +169,51 @@ export class RoomsService {
       .order('joined_at');
 
     return data || [];
+  }
+
+  async updateRoom(userId: string, roomId: string, dto: UpdateRoomDto) {
+    const { data: room } = await this.supabase
+      .from('focus_rooms')
+      .select('created_by')
+      .eq('id', roomId)
+      .single();
+
+    if (!room) throw new NotFoundException('Room not found');
+    if (room.created_by !== userId) throw new BadRequestException('Only the creator can update this room');
+
+    const updates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(dto)) {
+      if (value !== undefined) updates[key] = value;
+    }
+
+    const { data, error } = await this.supabase
+      .from('focus_rooms')
+      .update(updates)
+      .eq('id', roomId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException('Failed to update room');
+    return data;
+  }
+
+  async deleteRoom(userId: string, roomId: string) {
+    const { data: room } = await this.supabase
+      .from('focus_rooms')
+      .select('created_by')
+      .eq('id', roomId)
+      .single();
+
+    if (!room) throw new NotFoundException('Room not found');
+    if (room.created_by !== userId) throw new BadRequestException('Only the creator can delete this room');
+
+    const { error } = await this.supabase
+      .from('focus_rooms')
+      .update({ is_active: false })
+      .eq('id', roomId);
+
+    if (error) throw new BadRequestException('Failed to delete room');
+    return { message: 'Room deleted' };
   }
 
   async getMessages(roomId: string, limit = 50) {

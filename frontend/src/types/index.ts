@@ -149,6 +149,23 @@ export interface FocusRoom {
   profiles?: { username: string; display_name: string; avatar_url: string };
 }
 
+export interface RoomParticipant {
+  id: string;
+  room_id: string;
+  user_id: string;
+  joined_at: string;
+  focus_minutes: number;
+  is_focusing: boolean;
+  profiles?: {
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+    xp_total: number;
+    level_id: number;
+    current_streak: number;
+  };
+}
+
 export interface GamificationProfile {
   xp_total: number;
   level_id: number;

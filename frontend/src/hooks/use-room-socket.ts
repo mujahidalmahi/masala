@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store';
+import { roomsApi } from '@/lib/api';
+import { RoomParticipant } from '@/types';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
@@ -23,8 +25,27 @@ export function useRoomSocket(roomId: string | null) {
   const token = useAuthStore((s) => s.token);
   const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);
-  const [participants, setParticipants] = useState<number>(0);
+  const [participantList, setParticipantList] = useState<RoomParticipant[]>([]);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
+
+  const participants = participantList.length;
+
+  // Fetch participant list via REST
+  const fetchParticipants = useCallback(async () => {
+    if (!roomId) return;
+    try {
+      const res = await roomsApi.getParticipants(roomId);
+      const list = (res.data.data || res.data) as RoomParticipant[];
+      setParticipantList(list);
+    } catch {}
+  }, [roomId]);
+
+  // Initial fetch + periodic refresh every 60s (syncs XP, focus_minutes, etc.)
+  useEffect(() => {
+    fetchParticipants();
+    const id = setInterval(fetchParticipants, 60000);
+    return () => clearInterval(id);
+  }, [fetchParticipants]);
 
   useEffect(() => {
     if (!roomId || !token) return;
@@ -46,7 +67,27 @@ export function useRoomSocket(roomId: string | null) {
     });
 
     socket.on('participant_count', (data: { count: number }) => {
-      setParticipants(data.count);
+      setParticipantList((prev) => {
+        if (prev.length === data.count) return prev;
+        fetchParticipants();
+        return prev;
+      });
+    });
+
+    socket.on('user_joined', () => {
+      fetchParticipants();
+    });
+
+    socket.on('user_left', (data: { userId: string }) => {
+      setParticipantList((prev) => prev.filter((p) => p.user_id !== data.userId));
+    });
+
+    socket.on('focus_updated', (data: { userId: string; focus_minutes: number }) => {
+      setParticipantList((prev) =>
+        prev.map((p) =>
+          p.user_id === data.userId ? { ...p, focus_minutes: data.focus_minutes } : p,
+        ),
+      );
     });
 
     socket.on('new_message', (msg: RoomMessage) => {
@@ -66,6 +107,7 @@ export function useRoomSocket(roomId: string | null) {
     socket: socketRef.current,
     connected,
     participants,
+    participantList,
     messages,
     sendFocusUpdate: (focus_minutes: number) =>
       socketRef.current?.emit('focus_update', { room_id: roomId, focus_minutes }),

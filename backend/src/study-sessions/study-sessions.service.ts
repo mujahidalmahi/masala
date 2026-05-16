@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateSessionDto, EndSessionDto } from './dto/create-session.dto';
 
@@ -38,31 +38,25 @@ export class StudySessionsService {
     if (!session) throw new NotFoundException('Session not found');
     if (session.ended_at) throw new NotFoundException('Session already ended');
 
-    const updates: any = { ended_at: dto.ended_at, notes: dto.notes || session.notes };
-    if (dto.duration_minutes) updates.duration_minutes = dto.duration_minutes;
+    const endedMs = new Date(dto.ended_at).getTime();
+    const startedMs = new Date(session.started_at).getTime();
+    const actualMinutes = Math.max(1, Math.round((endedMs - startedMs) / 60000));
 
     const { data, error } = await this.supabase
       .from('study_sessions')
-      .update(updates)
+      .update({
+        ended_at: dto.ended_at,
+        notes: dto.notes || session.notes,
+        duration_minutes: actualMinutes,
+      })
       .eq('id', sessionId)
       .select()
       .single();
 
-    if (error) throw new NotFoundException('Failed to end session');
+    if (error) throw new BadRequestException(`Failed to end session: ${error.message}`);
 
-    const { data: xpResult } = await this.supabase.rpc('add_xp', {
-      p_user_id: userId,
-      p_amount: data.xp_earned,
-      p_reason: 'study_session',
-      p_reference_type: 'study_session',
-      p_reference_id: sessionId,
-    });
-
-    const { data: streakResult } = await this.supabase.rpc('update_streak', {
-      p_user_id: userId,
-    });
-
-    return { session: data, xp: xpResult, streak: streakResult };
+    // XP, streak, and daily logs are handled by the process_study_session_end trigger
+    return { session: data };
   }
 
   async getHistory(userId: string, limit = 20, offset = 0) {

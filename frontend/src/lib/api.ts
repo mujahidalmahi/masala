@@ -143,7 +143,7 @@ export const routinesApi = {
 // ─── Textbooks ────────────────────────────────────
 export const textbooksApi = {
   upload: (data: FormData) =>
-    api.post('/api/textbooks/upload', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post('/api/textbooks/upload', data, { headers: { 'Content-Type': undefined } }),
   getAll: () => api.get('/api/textbooks'),
   delete: (id: string) => api.delete(`/api/textbooks/${id}`),
 };
@@ -151,7 +151,7 @@ export const textbooksApi = {
 // ─── Files ────────────────────────────────────────
 export const filesApi = {
   upload: (data: FormData) =>
-    api.post('/api/files/upload', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post('/api/files/upload', data, { headers: { 'Content-Type': undefined } }),
   getAll: () => api.get('/api/files'),
   delete: (id: string) => api.delete(`/api/files/${id}`),
 };

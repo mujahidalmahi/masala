@@ -1,20 +1,45 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../supabase/supabase.service';
-import { UploadTextbookDto } from './dto/textbook.dto';
-import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class TextbooksService {
-  constructor(
-    private supabase: SupabaseService,
-    private configService: ConfigService,
-  ) {}
+  constructor(private supabase: SupabaseService) {}
 
-  async uploadTextbook(userId: string, dto: UploadTextbookDto, file?: Express.Multer.File) {
-    let fileUrl: string | null = null;
-    const title = dto.title || file?.originalname || 'Untitled';
+  async uploadTextbook(userId: string, body: any, file?: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file provided');
+
+    const allowedMimes = [
+      'application/pdf',
+      'application/epub+zip',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+    ];
+
+    if (!allowedMimes.includes(file.mimetype)) {
+      throw new BadRequestException(`Unsupported file type: ${file.mimetype}`);
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      throw new BadRequestException('File size exceeds 50MB limit');
+    }
+
+    const title = body.title || file.originalname.replace(/\.[^/.]+$/, '') || 'Untitled';
+    const author = body.author || null;
+    let subjectId = body.subject_id || null;
+
+    if (!subjectId) {
+      const { data: defaultSubject } = await this.supabase
+        .from('subjects')
+        .select('id')
+        .limit(1)
+        .single();
+      subjectId = defaultSubject?.id || null;
+    }
+
     const mimeMap: Record<string, string> = {
       'application/pdf': 'pdf',
       'application/epub+zip': 'epub',
@@ -25,38 +50,31 @@ export class TextbooksService {
       'image/jpeg': 'image',
       'image/webp': 'image',
     };
-    const file_type = dto.file_type || (file ? mimeMap[file.mimetype] : null) || 'pdf';
+    const fileType = mimeMap[file.mimetype] || 'pdf';
 
-    if (file) {
-      const fileName = `${userId}/${Date.now()}-${file.originalname}`;
-      const { data: uploadData, error: uploadError } = await this.supabase
-        .storage()
-        .from('textbooks')
-        .upload(fileName, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false,
-        });
+    const fileName = `${userId}/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
 
-      if (uploadError) throw new BadRequestException(`Upload failed: ${uploadError.message}`);
+    const { error: uploadError } = await this.supabase
+      .storage()
+      .from('textbooks')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
 
-      const { data: signedUrlData } = await this.supabase
-        .storage()
-        .from('textbooks')
-        .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
-      fileUrl = signedUrlData?.signedUrl || null;
-    }
+    if (uploadError) throw new BadRequestException(`Upload failed: ${uploadError.message}`);
 
     const { data, error } = await this.supabase
       .from('textbooks')
       .insert({
         user_id: userId,
-        subject_id: dto.subject_id || null,
+        subject_id: subjectId,
         title,
-        author: dto.author || null,
-        file_url: fileUrl,
-        file_type,
-        status: 'processing',
+        author,
+        file_url: fileName,
+        file_type: fileType,
+        status: 'ready',
+        extracted_data: { file_size: file.size, original_name: file.originalname },
       })
       .select()
       .single();
@@ -71,7 +89,32 @@ export class TextbooksService {
       .select('*, subjects(name)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    return data || [];
+
+    const textbooks = data || [];
+
+    const withUrls = await Promise.all(
+      textbooks.map(async (book) => {
+        const filePath = book.file_url;
+        if (filePath && !filePath.startsWith('http')) {
+          const { data: signedUrlData } = await this.supabase
+            .storage()
+            .from('textbooks')
+            .createSignedUrl(filePath, 60 * 60 * 24);
+          return {
+            ...book,
+            file_url: signedUrlData?.signedUrl || null,
+            file_size: book.extracted_data?.file_size || 0,
+          };
+        }
+        return {
+          ...book,
+          file_url: filePath || null,
+          file_size: book.extracted_data?.file_size || 0,
+        };
+      }),
+    );
+
+    return withUrls;
   }
 
   async deleteTextbook(userId: string, textbookId: string) {
@@ -84,9 +127,15 @@ export class TextbooksService {
 
     if (!textbook) throw new NotFoundException('Textbook not found');
 
-    if (textbook.file_url) {
-      const filePath = textbook.file_url.split('/').slice(-2).join('/');
+    const filePath = textbook.file_url;
+    if (filePath && !filePath.startsWith('http')) {
       await this.supabase.storage().from('textbooks').remove([filePath]);
+    } else if (filePath && filePath.startsWith('http')) {
+      const parts = filePath.split('/');
+      const objectPath = parts.slice(parts.indexOf('object') + 2).join('/').split('?')[0];
+      if (objectPath) {
+        await this.supabase.storage().from('textbooks').remove([decodeURIComponent(objectPath)]);
+      }
     }
 
     const { error } = await this.supabase
@@ -99,8 +148,9 @@ export class TextbooksService {
   }
 
   async uploadFile(userId: string, file: Express.Multer.File, metadata: Record<string, any>) {
-    const fileName = `${userId}/uploads/${Date.now()}-${file.originalname}`;
-    const { data: uploadData, error: uploadError } = await this.supabase
+    const fileName = `${userId}/uploads/${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+
+    const { error: uploadError } = await this.supabase
       .storage()
       .from('uploads')
       .upload(fileName, file.buffer, {
@@ -110,11 +160,6 @@ export class TextbooksService {
 
     if (uploadError) throw new BadRequestException(`Upload failed: ${uploadError.message}`);
 
-    const { data: signedUrlData } = await this.supabase
-      .storage()
-      .from('uploads')
-      .createSignedUrl(fileName, 60 * 60 * 24 * 365);
-
     const { data, error } = await this.supabase
       .from('uploaded_files')
       .insert({
@@ -123,7 +168,7 @@ export class TextbooksService {
         chapter_id: metadata.chapter_id || null,
         topic_id: metadata.topic_id || null,
         file_name: file.originalname,
-        file_url: signedUrlData?.signedUrl || '',
+        file_url: fileName,
         file_type: file.mimetype,
         file_size: file.size,
         file_category: metadata.file_category || 'note',
@@ -141,7 +186,24 @@ export class TextbooksService {
       .select('*, subjects(name), chapters(name), topics(name)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    return data || [];
+
+    const files = data || [];
+
+    const withUrls = await Promise.all(
+      files.map(async (file) => {
+        const filePath = file.file_url;
+        if (filePath && !filePath.startsWith('http')) {
+          const { data: signedUrlData } = await this.supabase
+            .storage()
+            .from('uploads')
+            .createSignedUrl(filePath, 60 * 60 * 24);
+          return { ...file, file_url: signedUrlData?.signedUrl || null };
+        }
+        return { ...file, file_url: filePath || null };
+      }),
+    );
+
+    return withUrls;
   }
 
   async deleteFile(userId: string, fileId: string) {
@@ -154,7 +216,10 @@ export class TextbooksService {
 
     if (!file) throw new NotFoundException('File not found');
 
-    await this.supabase.storage().from('uploads').remove([file.file_url.split('/').slice(-2).join('/')]);
+    const filePath = file.file_url;
+    if (filePath && !filePath.startsWith('http')) {
+      await this.supabase.storage().from('uploads').remove([filePath]);
+    }
 
     await this.supabase.from('uploaded_files').delete().eq('id', fileId);
     return { message: 'File deleted' };

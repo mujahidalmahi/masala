@@ -14,7 +14,9 @@ import { RoomsService } from './rooms.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+      : ['http://localhost:3000'],
     credentials: true,
   },
   namespace: '/ws/rooms',
@@ -55,29 +57,41 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.disconnect();
     }
   }
+async handleDisconnect(client: Socket) {
+  const userId = client.data.userId;
+  if (!userId) return;
 
-  handleDisconnect(client: Socket) {
-    const userId = client.data.userId;
-    if (!userId) return;
+  // Build a snapshot of rooms to leave, then iterate sequentially with await.
+  // forEach with async callbacks doesn't await — errors get swallowed and
+  // ghost participants accumulate when network drops mid-session.
+  const roomsToLeave: string[] = [];
+  this.roomUserMap.forEach((users, roomId) => {
+    if (users.has(userId)) roomsToLeave.push(roomId);
+  });
 
-    this.roomUserMap.forEach(async (users, roomId) => {
-      if (users.has(userId)) {
-        users.delete(userId);
-        if (users.size === 0) this.roomUserMap.delete(roomId);
-        try {
-          await this.roomsService.leaveRoom(userId, roomId);
-        } catch { }
-        this.server.to(roomId).emit('participant_left', { userId });
-        this.server.to(roomId).emit('participant_count', { count: users.size });
-      }
-    });
+  for (const roomId of roomsToLeave) {
+    const users = this.roomUserMap.get(roomId);
+    if (!users) continue;
 
-    const sockets = this.userSocketMap.get(userId);
-    if (sockets) {
-      sockets.delete(client.id);
-      if (sockets.size === 0) this.userSocketMap.delete(userId);
+    users.delete(userId);
+    if (users.size === 0) this.roomUserMap.delete(roomId);
+
+    try {
+      await this.roomsService.leaveRoom(userId, roomId);
+    } catch (err) {
+      this.logger.error(`Failed to leave room ${roomId} on disconnect`, err);
     }
+
+    this.server.to(roomId).emit('participant_left', { userId });
+    this.server.to(roomId).emit('participant_count', { count: users.size });
   }
+
+  const sockets = this.userSocketMap.get(userId);
+  if (sockets) {
+    sockets.delete(client.id);
+    if (sockets.size === 0) this.userSocketMap.delete(userId);
+  }
+}
 
   @SubscribeMessage('join_room')
   async handleJoinRoom(

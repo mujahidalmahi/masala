@@ -1,4 +1,5 @@
 'use client';
+import { useRouter } from 'next/navigation';
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -60,13 +61,19 @@ export default function RoomsPage() {
     onError: () => toast.error('Failed to create room'),
   });
 
-  const joinMutation = useMutation({
-    mutationFn: (roomId: string) => roomsApi.join(roomId),
-    onSuccess: () => {
-      toast.success('Joined room!');
-    },
-    onError: () => toast.error('Failed to join room'),
-  });
+ const router = useRouter();
+
+const joinMutation = useMutation({
+  mutationFn: async (roomId: string) => {
+    await roomsApi.join(roomId);
+    return roomId;
+  },
+  onSuccess: (roomId) => {
+    toast.success('Joining room...');
+    router.push(`/rooms/${roomId}`);
+  },
+  onError: () => toast.error('Failed to join room'),
+});
 
   if (isLoading) return <RoomsSkeleton />;
   if (error) {

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -63,5 +63,41 @@ export class UsersService {
       recent_sessions: recentSessions || [],
       next_level: nextLevel || null,
     };
+  }
+
+  async completeOnboarding(
+    userId: string,
+    data: { country_id: string; board_id: string; grade_id: string; subject_ids: string[] },
+  ) {
+    if (!data.country_id || !data.board_id || !data.grade_id) {
+      throw new BadRequestException('country_id, board_id, and grade_id are required');
+    }
+
+    const { error: profileError } = await this.supabase
+      .from('profiles')
+      .update({
+        country_id: data.country_id,
+        board_id: data.board_id,
+        grade_id: data.grade_id,
+        is_onboarded: true,
+      })
+      .eq('id', userId);
+
+    if (profileError) throw new NotFoundException('Failed to update profile');
+
+    if (data.subject_ids?.length > 0) {
+      const gradeSubjects = data.subject_ids.map((subjectId) => ({
+        grade_id: data.grade_id,
+        subject_id: subjectId,
+      }));
+      const { error: gsError } = await this.supabase
+        .from('grade_subjects')
+        .upsert(gradeSubjects, { onConflict: 'grade_id,subject_id' });
+      if (gsError) {
+        // Non-critical - subjects already exist
+      }
+    }
+
+    return { message: 'Onboarding completed', is_onboarded: true };
   }
 }

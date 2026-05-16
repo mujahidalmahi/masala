@@ -29,7 +29,7 @@ export default function QuizzesPage() {
     queryKey: ['quizzes'],
     queryFn: async () => {
       const res = await quizzesApi.getAll();
-      return res.data as Quiz[];
+      return (res.data.data || res.data) as Quiz[];
     },
   });
 
@@ -37,7 +37,7 @@ export default function QuizzesPage() {
     queryKey: ['quiz-attempts'],
     queryFn: async () => {
       const res = await quizzesApi.getAttempts();
-      return res.data as QuizAttempt[];
+      return (res.data.data || res.data) as QuizAttempt[];
     },
   });
 

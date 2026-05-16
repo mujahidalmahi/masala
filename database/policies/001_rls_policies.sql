@@ -56,7 +56,7 @@ SECURITY DEFINER SET search_path = ''
 AS $$
     SELECT COALESCE(
         current_setting('request.jwt.claim.sub', true),
-        (SELECT id FROM auth.users LIMIT 1)  -- fallback for development
+        (SELECT id::text FROM auth.users LIMIT 1)  -- fallback for development
     )::UUID;
 $$;
 

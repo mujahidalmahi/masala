@@ -16,7 +16,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && typeof window !== 'undefined') {
+    const isAuthRoute = err.config?.url?.startsWith('/api/auth/');
+    if (err.response?.status === 401 && typeof window !== 'undefined' && !isAuthRoute) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -38,6 +39,8 @@ export const usersApi = {
   getProfile: () => api.get('/api/users/me'),
   updateProfile: (data: any) => api.patch('/api/users/me', data),
   getDashboard: () => api.get('/api/users/dashboard'),
+  onboard: (data: { country_id: string; board_id: string; grade_id: string; subject_ids: string[] }) =>
+    api.post('/api/users/onboarding', data),
 };
 
 // ─── Curriculum ───────────────────────────────────

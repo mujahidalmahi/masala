@@ -79,6 +79,7 @@ export class AuthService {
         xp_total: 0,
         level_id: 1,
         current_streak: 0,
+        role: 'user',
       },
       access_token: token,
     };
@@ -91,14 +92,14 @@ export class AuthService {
     });
 
     if (authError) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(authError.message);
     }
 
     const userId = authData.user.id;
 
     const { data: profile } = await this.supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, xp_total, level_id, current_streak')
+      .select('id, username, display_name, avatar_url, xp_total, level_id, current_streak, role')
       .eq('id', userId)
       .single();
 
@@ -114,6 +115,7 @@ export class AuthService {
         xp_total: profile?.xp_total || 0,
         level_id: profile?.level_id || 1,
         current_streak: profile?.current_streak || 0,
+        role: profile?.role || 'user',
       },
       access_token: token,
     };

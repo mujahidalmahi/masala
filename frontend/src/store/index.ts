@@ -22,11 +22,13 @@ export const useAuthStore = create<AuthState>()(
 
       setAuth: (user, token) => {
         localStorage.setItem('access_token', token);
+        document.cookie = `access_token=${token}; path=/; max-age=604800; SameSite=Lax`;
         set({ user, token });
       },
 
       logout: () => {
         localStorage.removeItem('access_token');
+        document.cookie = 'access_token=; path=/; max-age=0';
         set({ user: null, token: null });
       },
 

@@ -27,7 +27,7 @@ export default function SettingsPage() {
     queryKey: ['profile'],
     queryFn: async () => {
       const res = await usersApi.getProfile();
-      return res.data as UserType;
+      return (res.data.data || res.data) as UserType;
     },
   });
 
@@ -46,7 +46,7 @@ export default function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       toast.success('Profile updated!');
     },
-    onError: () => toast.error('Failed to update profile'),
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Failed to update profile'),
   });
 
   function handleSubmit(e: React.FormEvent) {

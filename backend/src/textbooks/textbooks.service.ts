@@ -14,6 +14,18 @@ export class TextbooksService {
 
   async uploadTextbook(userId: string, dto: UploadTextbookDto, file?: Express.Multer.File) {
     let fileUrl: string | null = null;
+    const title = dto.title || file?.originalname || 'Untitled';
+    const mimeMap: Record<string, string> = {
+      'application/pdf': 'pdf',
+      'application/epub+zip': 'epub',
+      'text/plain': 'txt',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'doc',
+      'image/png': 'image',
+      'image/jpeg': 'image',
+      'image/webp': 'image',
+    };
+    const file_type = dto.file_type || (file ? mimeMap[file.mimetype] : null) || 'pdf';
 
     if (file) {
       const fileName = `${userId}/${Date.now()}-${file.originalname}`;
@@ -39,11 +51,11 @@ export class TextbooksService {
       .from('textbooks')
       .insert({
         user_id: userId,
-        subject_id: dto.subject_id,
-        title: dto.title,
+        subject_id: dto.subject_id || null,
+        title,
         author: dto.author || null,
         file_url: fileUrl,
-        file_type: dto.file_type,
+        file_type,
         status: 'processing',
       })
       .select()

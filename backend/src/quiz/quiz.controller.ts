@@ -5,7 +5,6 @@ import {
   Param,
   Body,
   Query,
-  UsePipes,
 } from '@nestjs/common';
 import { QuizService } from './quiz.service';
 import {
@@ -27,14 +26,12 @@ export class QuizController {
   constructor(private quizService: QuizService) {}
 
   @Post()
-  @UsePipes(new ZodValidationPipe(CreateQuizSchema))
-  createQuiz(@CurrentUser() user: JwtPayload, @Body() dto: CreateQuizDto) {
+  createQuiz(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(CreateQuizSchema)) dto: CreateQuizDto) {
     return this.quizService.createQuiz(user.sub, dto);
   }
 
   @Post('generate')
-  @UsePipes(new ZodValidationPipe(AutoGenerateQuizSchema))
-  autoGenerate(@CurrentUser() user: JwtPayload, @Body() dto: AutoGenerateQuizDto) {
+  autoGenerate(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(AutoGenerateQuizSchema)) dto: AutoGenerateQuizDto) {
     return this.quizService.autoGenerateQuiz(user.sub, dto);
   }
 
@@ -52,17 +49,15 @@ export class QuizController {
   }
 
   @Post('attempts')
-  @UsePipes(new ZodValidationPipe(StartAttemptSchema))
-  startAttempt(@CurrentUser() user: JwtPayload, @Body() dto: StartAttemptDto) {
+  startAttempt(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(StartAttemptSchema)) dto: StartAttemptDto) {
     return this.quizService.startAttempt(user.sub, dto);
   }
 
   @Post('attempts/:id/answer')
-  @UsePipes(new ZodValidationPipe(SubmitAnswerSchema))
   submitAnswer(
     @CurrentUser() user: JwtPayload,
     @Param('id') attemptId: string,
-    @Body() dto: SubmitAnswerDto,
+    @Body(new ZodValidationPipe(SubmitAnswerSchema)) dto: SubmitAnswerDto,
   ) {
     return this.quizService.submitAnswer(user.sub, attemptId, dto);
   }

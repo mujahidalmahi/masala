@@ -39,7 +39,7 @@ export default function RoomsPage() {
     queryKey: ['rooms'],
     queryFn: async () => {
       const res = await roomsApi.getActive();
-      return res.data as FocusRoom[];
+      return (res.data.data || res.data) as FocusRoom[];
     },
   });
 

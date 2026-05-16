@@ -33,7 +33,7 @@ export default function GamificationPage() {
     queryKey: ['gamification-profile'],
     queryFn: async () => {
       const res = await gamificationApi.getProfile();
-      return res.data;
+      return res.data.data || res.data;
     },
   });
 
@@ -41,7 +41,7 @@ export default function GamificationPage() {
     queryKey: ['gamification-badges'],
     queryFn: async () => {
       const res = await gamificationApi.getBadges();
-      return res.data as BadgeType[];
+      return (res.data.data || res.data) as BadgeType[];
     },
   });
 
@@ -49,7 +49,7 @@ export default function GamificationPage() {
     queryKey: ['gamification-leaderboard'],
     queryFn: async () => {
       const res = await gamificationApi.getLeaderboard({ limit: 20 });
-      return res.data as LeaderboardEntry[];
+      return (res.data.data || res.data) as LeaderboardEntry[];
     },
   });
 
@@ -57,7 +57,7 @@ export default function GamificationPage() {
     queryKey: ['gamification-challenges'],
     queryFn: async () => {
       const res = await gamificationApi.getChallenges();
-      return res.data;
+      return res.data.data || res.data;
     },
   });
 

@@ -8,6 +8,7 @@ export interface AuthResponse {
     xp_total: number;
     level_id: number;
     current_streak: number;
+    role: string;
   };
   access_token: string;
 }

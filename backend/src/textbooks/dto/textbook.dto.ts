@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
 export const UploadTextbookSchema = z.object({
-  title: z.string().min(1).max(255),
+  title: z.string().min(1).max(255).optional(),
   author: z.string().max(255).optional().nullable(),
-  subject_id: z.string().uuid(),
-  file_type: z.enum(['pdf', 'image', 'doc', 'txt', 'epub']),
+  subject_id: z.string().uuid().optional().nullable(),
+  file_type: z.enum(['pdf', 'image', 'doc', 'txt', 'epub']).optional(),
 });
 
 export const UploadFileSchema = z.object({

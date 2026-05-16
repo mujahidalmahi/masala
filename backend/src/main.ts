@@ -27,8 +27,6 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  app.setGlobalPrefix('api', { exclude: ['api/health'] });
-
   app.enableShutdownHooks();
 
   await app.listen(port, host);

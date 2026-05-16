@@ -14,6 +14,7 @@ import { RoomsModule } from './rooms/rooms.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { ReportsModule } from './reports/reports.module';
 import { RoutineModule } from './routine/routine.module';
+import { AdminModule } from './admin/admin.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -38,6 +39,7 @@ import { HealthController } from './health.controller';
     PredictionModule,
     ReportsModule,
     RoutineModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [

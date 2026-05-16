@@ -27,7 +27,7 @@ export default function DashboardPage() {
     queryKey: ['dashboard'],
     queryFn: async () => {
       const res = await usersApi.getDashboard();
-      return res.data;
+      return res.data.data || res.data;
     },
   });
 

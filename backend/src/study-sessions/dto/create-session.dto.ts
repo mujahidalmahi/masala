@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const CreateSessionSchema = z.object({
-  subject_id: z.string().uuid('Invalid subject ID'),
+  subject_id: z.string().uuid('Invalid subject ID').optional().nullable(),
   chapter_id: z.string().uuid().optional().nullable(),
   topic_id: z.string().uuid().optional().nullable(),
   duration_minutes: z.number().int().min(1, 'Duration must be at least 1 minute'),

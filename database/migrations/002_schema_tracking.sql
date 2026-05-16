@@ -9,7 +9,7 @@
 CREATE TABLE study_sessions (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id           UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    subject_id        UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    subject_id        UUID REFERENCES subjects(id) ON DELETE SET NULL,
     chapter_id        UUID REFERENCES chapters(id) ON DELETE SET NULL,
     topic_id          UUID REFERENCES topics(id) ON DELETE SET NULL,
     duration_minutes  INT NOT NULL CHECK (duration_minutes > 0),

@@ -39,7 +39,7 @@ export default function StudySessionsPage() {
     queryKey: ['study-sessions'],
     queryFn: async () => {
       const res = await sessionsApi.getHistory({ limit: 50 });
-      return res.data as StudySession[];
+      return (res.data.data || res.data) as StudySession[];
     },
   });
 
@@ -47,7 +47,7 @@ export default function StudySessionsPage() {
     queryKey: ['study-sessions-stats'],
     queryFn: async () => {
       const res = await sessionsApi.getStats();
-      return res.data;
+      return res.data.data || res.data;
     },
   });
 
@@ -59,8 +59,11 @@ export default function StudySessionsPage() {
       toast.success('Study session started!');
       setCreating(false);
     },
-    onError: () => {
-      toast.error('Failed to start session');
+    onError: (err: any) => {
+      const errors = err.response?.data?.errors;
+      const msg = errors?.map((e: any) => `${e.path}: ${e.message}`).join(', ') || err.response?.data?.message || err.message || 'Failed to start session';
+      toast.error(msg);
+      console.error('Create session error:', err.response?.data);
       setCreating(false);
     },
   });

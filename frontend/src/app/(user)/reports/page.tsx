@@ -34,7 +34,7 @@ export default function ReportsPage() {
     queryKey: ['reports-weekly'],
     queryFn: async () => {
       const res = await reportsApi.getWeekly();
-      return res.data;
+      return res.data.data || res.data;
     },
   });
 
@@ -42,7 +42,7 @@ export default function ReportsPage() {
     queryKey: ['reports-monthly'],
     queryFn: async () => {
       const res = await reportsApi.getMonthly();
-      return res.data;
+      return res.data.data || res.data;
     },
   });
 
@@ -50,7 +50,7 @@ export default function ReportsPage() {
     queryKey: ['reports-custom', startDate, endDate],
     queryFn: async () => {
       const res = await reportsApi.getCustom(startDate, endDate);
-      return res.data;
+      return res.data.data || res.data;
     },
     enabled: false,
   });

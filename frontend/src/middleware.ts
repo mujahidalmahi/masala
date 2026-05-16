@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
   const isDashboardRoute = path.startsWith('/dashboard') || path.startsWith('/study-sessions') ||
     path.startsWith('/quizzes') || path.startsWith('/rooms') || path.startsWith('/gamification') ||
     path.startsWith('/reports') || path.startsWith('/routine') || path.startsWith('/textbooks') ||
-    path.startsWith('/settings');
+    path.startsWith('/settings') || path.startsWith('/onboarding');
 
   if (!token && isAdminRoute) {
     return NextResponse.redirect(new URL('/admin/login', request.url));

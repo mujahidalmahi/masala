@@ -47,7 +47,7 @@ export default function RoutinePage() {
     queryKey: ['routine-today'],
     queryFn: async () => {
       const res = await routinesApi.getToday();
-      return res.data as Routine;
+      return (res.data.data || res.data) as Routine;
     },
   });
 

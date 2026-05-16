@@ -6,7 +6,6 @@ export interface AppConfig {
     url: string;
     anonKey: string;
     serviceRoleKey: string;
-    jwtSecret: string;
   };
   jwt: {
     secret: string;
@@ -32,7 +31,6 @@ export const configuration = (): AppConfig => ({
     url: process.env.SUPABASE_URL || '',
     anonKey: process.env.SUPABASE_ANON_KEY || '',
     serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    jwtSecret: process.env.SUPABASE_JWT_SECRET || '',
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'studysprint-dev-secret',

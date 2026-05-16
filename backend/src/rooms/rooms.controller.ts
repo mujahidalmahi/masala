@@ -5,7 +5,6 @@ import {
   Param,
   Body,
   Query,
-  UsePipes,
 } from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { CreateRoomSchema, CreateRoomDto } from './dto/rooms.dto';
@@ -18,8 +17,7 @@ export class RoomsController {
   constructor(private roomsService: RoomsService) {}
 
   @Post()
-  @UsePipes(new ZodValidationPipe(CreateRoomSchema))
-  createRoom(@CurrentUser() user: JwtPayload, @Body() dto: CreateRoomDto) {
+  createRoom(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(CreateRoomSchema)) dto: CreateRoomDto) {
     return this.roomsService.createRoom(user.sub, dto);
   }
 

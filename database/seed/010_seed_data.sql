@@ -3,6 +3,19 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
+-- NOTE: To create an admin user, first sign up through the app or Supabase
+-- Auth UI, then run:
+--
+--   UPDATE public.profiles
+--   SET role = 'admin'
+--   WHERE id = (SELECT id FROM auth.users WHERE email = 'admin@example.com');
+--
+-- Default admin for development (create via Supabase Auth first):
+--   Email:    admin@studysprint.io
+--   Password: admin123456
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
 -- LEVELS
 -- ---------------------------------------------------------------------------
 INSERT INTO public.levels (id, level_name, xp_required, rewards) VALUES
@@ -166,8 +179,8 @@ CROSS JOIN LATERAL (VALUES
      '["State and explain Euclid division lemma", "Find HCF using Euclid algorithm", "Apply lemma to solve problems"]'),
     ('Fundamental Theorem of Arithmetic', 2, 'Every composite number can be expressed as product of primes',
      '["State the fundamental theorem of arithmetic", "Express numbers as product of primes", "Find LCM and HCF using prime factorization"]'),
-    ('Revisiting Irrational Numbers', 3, 'Proof that √2, √3, √5 are irrational',
-     ['"Prove that square roots of primes are irrational", "Apply proof by contradiction", "Identify rational vs irrational numbers"]'),
+     ('Revisiting Irrational Numbers', 3, 'Proof that √2, √3, √5 are irrational',
+      '["Prove that square roots of primes are irrational", "Apply proof by contradiction", "Identify rational vs irrational numbers"]'),
     ('Revisiting Rational Numbers', 4, 'Decimal expansions of rational numbers',
      '["Classify decimal expansions as terminating or non-terminating", "Convert between fractions and decimals", "Identify purely recurring decimals"]')
 ) AS t(name, display_order, content_summary, outcomes)

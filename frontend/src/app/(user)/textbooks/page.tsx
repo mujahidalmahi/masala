@@ -30,7 +30,7 @@ export default function TextbooksPage() {
     queryKey: ['textbooks'],
     queryFn: async () => {
       const res = await textbooksApi.getAll();
-      return res.data;
+      return res.data.data || res.data;
     },
   });
 

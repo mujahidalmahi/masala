@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  ConflictException,
-  UnauthorizedException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, ConflictException, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SignupDto } from './dto/signup.dto';
@@ -54,14 +49,17 @@ export class AuthService {
     const displayName = dto.display_name || dto.email.split('@')[0];
     const username = dto.username || dto.email.split('@')[0].toLowerCase();
 
-    const { error: profileError } = await this.supabase.from('profiles').update({
-      username,
-      display_name: displayName,
-      grade_id: dto.grade_id || null,
-      board_id: dto.board_id || null,
-      country_id: dto.country_id || null,
-      is_onboarded: false,
-    }).eq('id', userId);
+    const { error: profileError } = await this.supabase
+      .from('profiles')
+      .update({
+        username,
+        display_name: displayName,
+        grade_id: dto.grade_id || null,
+        board_id: dto.board_id || null,
+        country_id: dto.country_id || null,
+        is_onboarded: false,
+      })
+      .eq('id', userId);
 
     if (profileError) {
       this.logger.error(`Profile update failed: ${profileError.message}`);

@@ -26,10 +26,7 @@ export class CurriculumController {
   }
 
   @Get('chapters')
-  getChapters(
-    @Query('subject_id') subjectId: string,
-    @Query('grade_id') gradeId?: string,
-  ) {
+  getChapters(@Query('subject_id') subjectId: string, @Query('grade_id') gradeId?: string) {
     return this.curriculumService.getChapters(subjectId, gradeId);
   }
 
@@ -44,10 +41,7 @@ export class CurriculumController {
   }
 
   @Get('tree/:subjectId/:gradeId')
-  getFullTree(
-    @Param('subjectId') subjectId: string,
-    @Param('gradeId') gradeId: string,
-  ) {
+  getFullTree(@Param('subjectId') subjectId: string, @Param('gradeId') gradeId: string) {
     return this.curriculumService.getFullSubjectTree(subjectId, gradeId);
   }
 }

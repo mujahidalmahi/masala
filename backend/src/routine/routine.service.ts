@@ -54,10 +54,7 @@ export class RoutineService {
       throw new Error('Slot not found');
     }
 
-    await this.supabase
-      .from('routine_slots')
-      .update({ is_completed: true })
-      .eq('id', slotId);
+    await this.supabase.from('routine_slots').update({ is_completed: true }).eq('id', slotId);
 
     const { data: incompleteSlots } = await this.supabase
       .from('routine_slots')

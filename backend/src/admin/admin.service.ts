@@ -39,12 +39,12 @@ export class AdminService {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let query = this.supabase
-      .from('profiles')
-      .select('*', { count: 'exact' });
+    let query = this.supabase.from('profiles').select('*', { count: 'exact' });
 
     if (search) {
-      query = query.or(`display_name.ilike.%${search}%,email.ilike.%${search}%,username.ilike.%${search}%`);
+      query = query.or(
+        `display_name.ilike.%${search}%,email.ilike.%${search}%,username.ilike.%${search}%`,
+      );
     }
 
     const { data, count, error } = await query
@@ -56,29 +56,19 @@ export class AdminService {
   }
 
   async getUser(id: string) {
-    const { data, error } = await this.supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await this.supabase.from('profiles').select('*').eq('id', id).single();
     if (error || !data) throw new NotFoundException('User not found');
     return data;
   }
 
   async updateUser(id: string, data: any) {
-    const { error } = await this.supabase
-      .from('profiles')
-      .update(data)
-      .eq('id', id);
+    const { error } = await this.supabase.from('profiles').update(data).eq('id', id);
     if (error) throw new NotFoundException('Failed to update user');
     return this.getUser(id);
   }
 
   async deleteUser(id: string) {
-    const { error: profileError } = await this.supabase
-      .from('profiles')
-      .delete()
-      .eq('id', id);
+    const { error: profileError } = await this.supabase.from('profiles').delete().eq('id', id);
     if (profileError) throw new NotFoundException('Failed to delete user');
     const { error: authError } = await this.supabase.auth.admin.deleteUser(id);
     if (authError) throw new NotFoundException('Failed to delete auth user');
@@ -107,15 +97,18 @@ export class AdminService {
   }
 
   async deleteSubject(id: string) {
-    const { error } = await this.supabase
-      .from('subjects')
-      .delete()
-      .eq('id', id);
+    const { error } = await this.supabase.from('subjects').delete().eq('id', id);
     if (error) throw new NotFoundException('Failed to delete subject');
     return { message: 'Subject deleted successfully' };
   }
 
-  async createChapter(data: { subject_id: string; grade_id: string; name: string; display_order?: number; description?: string }) {
+  async createChapter(data: {
+    subject_id: string;
+    grade_id: string;
+    name: string;
+    display_order?: number;
+    description?: string;
+  }) {
     const { data: chapter, error } = await this.supabase
       .from('chapters')
       .insert(data)
@@ -136,7 +129,13 @@ export class AdminService {
     return chapter;
   }
 
-  async createTopic(data: { chapter_id: string; name: string; display_order?: number; content_summary?: string; learning_outcomes?: string[] }) {
+  async createTopic(data: {
+    chapter_id: string;
+    name: string;
+    display_order?: number;
+    content_summary?: string;
+    learning_outcomes?: string[];
+  }) {
     const { data: topic, error } = await this.supabase
       .from('topics')
       .insert(data)
@@ -219,15 +218,19 @@ export class AdminService {
   }
 
   async deleteQuestion(id: string) {
-    const { error } = await this.supabase
-      .from('questions')
-      .delete()
-      .eq('id', id);
+    const { error } = await this.supabase.from('questions').delete().eq('id', id);
     if (error) throw new NotFoundException('Failed to delete question');
     return { message: 'Question deleted successfully' };
   }
 
-  async createBadge(data: { name: string; description: string; icon_url?: string; badge_type: string; rarity: string; xp_reward?: number }) {
+  async createBadge(data: {
+    name: string;
+    description: string;
+    icon_url?: string;
+    badge_type: string;
+    rarity: string;
+    xp_reward?: number;
+  }) {
     const { data: badge, error } = await this.supabase
       .from('badges')
       .insert(data)
@@ -249,10 +252,7 @@ export class AdminService {
   }
 
   async deleteBadge(id: string) {
-    const { error } = await this.supabase
-      .from('badges')
-      .delete()
-      .eq('id', id);
+    const { error } = await this.supabase.from('badges').delete().eq('id', id);
     if (error) throw new NotFoundException('Failed to delete badge');
     return { message: 'Badge deleted successfully' };
   }

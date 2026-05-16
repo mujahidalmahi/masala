@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { CreateQuizDto, AutoGenerateQuizDto, SubmitAnswerDto, StartAttemptDto } from './dto/quiz.dto';
+import {
+  CreateQuizDto,
+  AutoGenerateQuizDto,
+  SubmitAnswerDto,
+  StartAttemptDto,
+} from './dto/quiz.dto';
 
 @Injectable()
 export class QuizService {
@@ -175,7 +180,8 @@ export class QuizService {
       .single();
 
     if (!attempt) throw new NotFoundException('Attempt not found');
-    if (attempt.status !== 'in_progress') throw new BadRequestException('Attempt already completed');
+    if (attempt.status !== 'in_progress')
+      throw new BadRequestException('Attempt already completed');
 
     const { data: result, error } = await this.supabase.rpc('submit_quiz_attempt', {
       p_attempt_id: attemptId,
@@ -209,7 +215,9 @@ export class QuizService {
 
     const { data: answers } = await this.supabase
       .from('user_answers')
-      .select('*, questions(question_text, question_type, explanation), question_options(option_text, is_correct)')
+      .select(
+        '*, questions(question_text, question_type, explanation), question_options(option_text, is_correct)',
+      )
       .eq('attempt_id', attemptId);
 
     return { ...attempt, answers: answers || [] };

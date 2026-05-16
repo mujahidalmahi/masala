@@ -32,7 +32,7 @@ export default function RoomsPage() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [roomName, setRoomName] = useState('');
-  const [roomType, setRoomType] = useState('focus');
+  const [roomType, setRoomType] = useState('silent_focus');
   const [maxParticipants, setMaxParticipants] = useState(5);
   const [isPrivate, setIsPrivate] = useState(false);
 
@@ -121,11 +121,13 @@ const joinMutation = useMutation({
                   <SelectTrigger id="room-type">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="focus">Focus</SelectItem>
-                    <SelectItem value="pomodoro">Pomodoro</SelectItem>
-                    <SelectItem value="discussion">Discussion</SelectItem>
-                  </SelectContent>
+                 <SelectContent>
+  <SelectItem value="silent_focus">Silent Focus</SelectItem>
+  <SelectItem value="pomodoro">Pomodoro</SelectItem>
+  <SelectItem value="group_study">Group Study</SelectItem>
+  <SelectItem value="exam_prep">Exam Prep</SelectItem>
+  <SelectItem value="night_study">Night Study</SelectItem>
+</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">

@@ -73,7 +73,7 @@ export default function SettingsPage() {
     );
   }
 
-  return <SettingsForm key={profile.id} profile={profile} />;
+  return <SettingsForm profile={profile} />;
 }
 
 function SettingsForm({ profile }: { profile: UserType }) {

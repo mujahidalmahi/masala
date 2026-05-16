@@ -1,6 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
+const HOURS_DECIMAL_PRECISION = 10;
+
 @Injectable()
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name);
@@ -146,7 +148,8 @@ export class ReportsService {
 
     return {
       total_minutes: totalMinutes,
-      total_hours: Math.round((totalMinutes / 60) * 10) / 10,
+      total_hours:
+        Math.round((totalMinutes / 60) * HOURS_DECIMAL_PRECISION) / HOURS_DECIMAL_PRECISION,
       total_sessions: totalSessions,
       active_days: activeDays,
       avg_daily_minutes: avgDailyMinutes,

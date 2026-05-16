@@ -7,7 +7,7 @@ export function useMediaQuery(query: string): boolean {
   const getServerSnapshot = () => false;
   const subscribe = (callback: () => void) => {
     if (typeof window === 'undefined') {
-      return () => undefined;
+      return () => {};
     }
     const mql = window.matchMedia(query);
     const listener = () => callback();

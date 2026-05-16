@@ -18,7 +18,10 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    const { error } = await this.supabase.from('profiles').update(dto).eq('id', userId);
+    const { error } = await this.supabase
+      .from('profiles')
+      .update(dto)
+      .eq('id', userId);
 
     if (error) throw new NotFoundException('Profile not found');
     return this.getProfile(userId);
@@ -33,8 +36,13 @@ export class UsersService {
         .eq('user_id', userId)
         .eq('log_date', new Date().toISOString().split('T')[0])
         .maybeSingle(),
-      this.supabase.from('streak_records').select('*').eq('user_id', userId).maybeSingle(),
-      this.supabase.rpc('get_weak_topics', { p_user_id: userId, p_limit: 5 }),
+      this.supabase
+        .from('streak_records')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      this.supabase
+        .rpc('get_weak_topics', { p_user_id: userId, p_limit: 5 }),
     ]);
 
     const { data: recentSessions } = await this.supabase
@@ -44,9 +52,8 @@ export class UsersService {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    const { data: nextLevel } = await this.supabase.rpc('get_next_level_info', {
-      p_user_id: userId,
-    });
+    const { data: nextLevel } = await this.supabase
+      .rpc('get_next_level_info', { p_user_id: userId });
 
     return {
       profile,

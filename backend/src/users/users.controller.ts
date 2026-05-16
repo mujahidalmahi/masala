@@ -15,10 +15,7 @@ export class UsersController {
   }
 
   @Patch('me')
-  updateProfile(
-    @CurrentUser() user: JwtPayload,
-    @Body(new ZodValidationPipe(UpdateProfileSchema)) dto: UpdateProfileDto,
-  ) {
+  updateProfile(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(UpdateProfileSchema)) dto: UpdateProfileDto) {
     return this.usersService.updateProfile(user.sub, dto);
   }
 

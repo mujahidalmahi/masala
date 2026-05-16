@@ -1,8 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
-const HOURS_ROUNDING_FACTOR = 10;
-
 @Injectable()
 export class ReportsService {
   private readonly logger = new Logger(ReportsService.name);
@@ -80,11 +78,7 @@ export class ReportsService {
 
   private async getRangeData(userId: string, startDate: Date, endDate: Date) {
     const [profile, sessions, dailyLogs, quizzes, streak, mastery] = await Promise.all([
-      this.supabase
-        .from('profiles')
-        .select('id, username, display_name, xp_total, level_id, current_streak, longest_streak')
-        .eq('id', userId)
-        .single(),
+      this.supabase.from('profiles').select('id, username, display_name, xp_total, level_id, current_streak, longest_streak').eq('id', userId).single(),
       this.supabase
         .from('study_sessions')
         .select('*, subjects(name), chapters(name), topics(name)')
@@ -126,10 +120,7 @@ export class ReportsService {
   }
 
   private buildSummary(sessions: any[], dailyLogs: any[]) {
-    const totalMinutes = sessions.reduce(
-      (sum: number, s: any) => sum + (s.duration_minutes || 0),
-      0,
-    );
+    const totalMinutes = sessions.reduce((sum: number, s: any) => sum + (s.duration_minutes || 0), 0);
     const totalSessions = sessions.length;
     const subjectsMap = new Map<string, { name: string; minutes: number; sessions: number }>();
 
@@ -148,7 +139,7 @@ export class ReportsService {
 
     return {
       total_minutes: totalMinutes,
-      total_hours: Math.round((totalMinutes / 60) * HOURS_ROUNDING_FACTOR) / HOURS_ROUNDING_FACTOR,
+      total_hours: Math.round(totalMinutes / 60 * 10) / 10,
       total_sessions: totalSessions,
       active_days: activeDays,
       avg_daily_minutes: avgDailyMinutes,

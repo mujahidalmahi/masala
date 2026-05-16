@@ -1,11 +1,14 @@
-import { Controller, Get, Post, Patch, Param, Body, Query } from '@nestjs/common';
-import { StudySessionsService } from './study-sessions.service';
 import {
-  CreateSessionSchema,
-  EndSessionSchema,
-  CreateSessionDto,
-  EndSessionDto,
-} from './dto/create-session.dto';
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Query,
+} from '@nestjs/common';
+import { StudySessionsService } from './study-sessions.service';
+import { CreateSessionSchema, EndSessionSchema, CreateSessionDto, EndSessionDto } from './dto/create-session.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtPayload } from '../common/types';

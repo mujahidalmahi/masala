@@ -54,7 +54,10 @@ export class GamificationService {
   }
 
   async getAllBadges() {
-    const { data } = await this.supabase.from('badges').select('*').order('name');
+    const { data } = await this.supabase
+      .from('badges')
+      .select('*')
+      .order('name');
 
     return data || [];
   }
@@ -70,7 +73,9 @@ export class GamificationService {
   }
 
   async getSkillTrees(subjectId?: string) {
-    let query = this.supabase.from('skill_trees').select('*, subjects(name)');
+    let query = this.supabase
+      .from('skill_trees')
+      .select('*, subjects(name)');
 
     if (subjectId) query = query.eq('subject_id', subjectId);
     const { data } = await query.order('name');
@@ -109,9 +114,7 @@ export class GamificationService {
       .select('*')
       .eq('user_id', userId);
 
-    const progressMap = new Map<string, any>(
-      (userProgress || []).map((uc: any) => [uc.challenge_id, uc]),
-    );
+    const progressMap = new Map<string, any>((userProgress || []).map((uc: any) => [uc.challenge_id, uc]));
 
     return (challenges || []).map((challenge: any) => ({
       ...challenge,
@@ -121,7 +124,10 @@ export class GamificationService {
   }
 
   async getLevels() {
-    const { data } = await this.supabase.from('levels').select('*').order('id');
+    const { data } = await this.supabase
+      .from('levels')
+      .select('*')
+      .order('id');
 
     return data || [];
   }

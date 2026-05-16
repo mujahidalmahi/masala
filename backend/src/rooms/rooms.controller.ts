@@ -1,4 +1,11 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Query,
+} from '@nestjs/common';
 import { RoomsService } from './rooms.service';
 import { CreateRoomSchema, CreateRoomDto } from './dto/rooms.dto';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -10,10 +17,7 @@ export class RoomsController {
   constructor(private roomsService: RoomsService) {}
 
   @Post()
-  createRoom(
-    @CurrentUser() user: JwtPayload,
-    @Body(new ZodValidationPipe(CreateRoomSchema)) dto: CreateRoomDto,
-  ) {
+  createRoom(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(CreateRoomSchema)) dto: CreateRoomDto) {
     return this.roomsService.createRoom(user.sub, dto);
   }
 

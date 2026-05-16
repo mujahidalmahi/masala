@@ -63,6 +63,139 @@ export default function ReportsPage() {
     refetchCustom();
   }
 
+  function ReportStats({ data, loading, error }: { data: any; loading: boolean; error?: Error | null }) {
+    if (loading) return <ReportStatsSkeleton />;
+    if (error) {
+      return (
+        <Card className="bg-card border-border">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <TrendingUp className="h-10 w-10 mb-3" />
+            <p className="text-lg font-medium">Failed to load report</p>
+          </CardContent>
+        </Card>
+      );
+    }
+    if (!data) {
+      return (
+        <Card className="bg-card border-border">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <TrendingUp className="h-10 w-10 mb-3" />
+            <p className="text-lg font-medium">No data available</p>
+            <p className="text-sm mt-1">Complete some study sessions to see your report.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-4"
+      >
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+          <motion.div variants={itemVariants}>
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Time</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-foreground">{formatTime(data.total_minutes ?? data.total_time ?? 0)}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Sessions</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <BookOpen className="h-4 w-4 text-purple-500" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-foreground">{data.session_count ?? data.total_sessions ?? 0}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">XP Earned</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-yellow-500" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-foreground">{data.xp_earned ?? data.total_xp ?? 0}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={itemVariants}>
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Avg Score</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <BarChart3 className="h-4 w-4 text-emerald-500" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-foreground">{formatPercentage(data.avg_score ?? data.average_score ?? 0)}</div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        {data.subjects && data.subjects.length > 0 && (
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg text-foreground">Subjects Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {data.subjects.map((subject: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-sm text-foreground">{subject.name || subject.subject}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">{formatTime(subject.minutes ?? subject.total_minutes ?? 0)}</span>
+                      <Progress value={subject.percentage ?? 0} className="h-2 w-20" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {data.quizzes && data.quizzes.length > 0 && (
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="text-lg text-foreground">Quizzes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {data.quizzes.map((q: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-foreground">{q.title || q.name}</span>
+                    <Badge variant={q.score >= 60 ? 'success' : 'destructive'} className="text-xs">
+                      {formatPercentage(q.score ?? q.percentage ?? 0)}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </motion.div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -130,152 +263,6 @@ export default function ReportsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function ReportStats({
-  data,
-  loading,
-  error,
-}: {
-  data: any;
-  loading: boolean;
-  error?: Error | null;
-}) {
-  if (loading) return <ReportStatsSkeleton />;
-  if (error) {
-    return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <TrendingUp className="h-10 w-10 mb-3" />
-          <p className="text-lg font-medium">Failed to load report</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  if (!data) {
-    return (
-      <Card className="bg-card border-border">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-          <TrendingUp className="h-10 w-10 mb-3" />
-          <p className="text-lg font-medium">No data available</p>
-          <p className="text-sm mt-1">Complete some study sessions to see your report.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-        <motion.div variants={itemVariants}>
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Time</CardTitle>
-              <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Clock className="h-4 w-4 text-blue-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">
-                {formatTime(data.total_minutes ?? data.total_time ?? 0)}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Sessions</CardTitle>
-              <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <BookOpen className="h-4 w-4 text-purple-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">
-                {data.session_count ?? data.total_sessions ?? 0}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">XP Earned</CardTitle>
-              <div className="h-8 w-8 rounded-lg bg-yellow-500/10 flex items-center justify-center">
-                <Zap className="h-4 w-4 text-yellow-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">
-                {data.xp_earned ?? data.total_xp ?? 0}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="bg-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Avg Score</CardTitle>
-              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <BarChart3 className="h-4 w-4 text-emerald-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-foreground">
-                {formatPercentage(data.avg_score ?? data.average_score ?? 0)}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-
-      {data.subjects && data.subjects.length > 0 && (
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-lg text-foreground">Subjects Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {data.subjects.map((subject: any, i: number) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm text-foreground">{subject.name || subject.subject}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground">
-                      {formatTime(subject.minutes ?? subject.total_minutes ?? 0)}
-                    </span>
-                    <Progress value={subject.percentage ?? 0} className="h-2 w-20" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {data.quizzes && data.quizzes.length > 0 && (
-        <Card className="bg-card border-border">
-          <CardHeader>
-            <CardTitle className="text-lg text-foreground">Quizzes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {data.quizzes.map((q: any, i: number) => (
-                <div key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-foreground">{q.title || q.name}</span>
-                  <Badge variant={q.score >= 60 ? 'success' : 'destructive'} className="text-xs">
-                    {formatPercentage(q.score ?? q.percentage ?? 0)}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </motion.div>
   );
 }
 

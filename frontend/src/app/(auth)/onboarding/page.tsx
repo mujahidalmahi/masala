@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -79,13 +79,8 @@ export default function OnboardingPage() {
     },
   });
 
-  useEffect(() => {
-    if (!token || !user) {
-      router.push('/login');
-    }
-  }, [router, token, user]);
-
   if (!token || !user) {
+    router.push('/login');
     return null;
   }
 

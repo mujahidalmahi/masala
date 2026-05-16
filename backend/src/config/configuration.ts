@@ -1,0 +1,53 @@
+export interface AppConfig {
+  nodeEnv: string;
+  port: number;
+  host: string;
+  supabase: {
+    url: string;
+    anonKey: string;
+    serviceRoleKey: string;
+    jwtSecret: string;
+  };
+  jwt: {
+    secret: string;
+    expiration: string;
+  };
+  cors: {
+    origin: string;
+  };
+  puppeteer: {
+    executablePath: string;
+  };
+  upload: {
+    maxFileSize: number;
+    dir: string;
+  };
+}
+
+export const configuration = (): AppConfig => ({
+  nodeEnv: process.env.NODE_ENV || 'development',
+  port: parseInt(process.env.PORT || '4000', 10),
+  host: process.env.HOST || '0.0.0.0',
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    anonKey: process.env.SUPABASE_ANON_KEY || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    jwtSecret: process.env.SUPABASE_JWT_SECRET || '',
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET || 'studysprint-dev-secret',
+    expiration: process.env.JWT_EXPIRATION || '7d',
+  },
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  },
+  puppeteer: {
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '',
+  },
+  upload: {
+    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10),
+    dir: process.env.UPLOAD_DIR || './uploads',
+  },
+});
+
+export type Configuration = ReturnType<typeof configuration>;

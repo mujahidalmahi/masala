@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: studysprint-os-backend
+    runtime: image
+    repo: https://github.com/your-org/studysprint-os
+    branch: main
+    docker:
+      dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: HOST
+        value: 0.0.0.0
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRATION
+        value: 7d
+      - key: CORS_ORIGIN
+        value: https://your-frontend.vercel.app
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: /usr/bin/chromium
+    healthCheckPath: /api/health
+    numInstances: 1
+    plan: starter

@@ -18,8 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { FocusRoom } from '@/types';
-<<<<<<< HEAD
-=======
+
 import { Trash2 } from 'lucide-react';
 import {
   useQuery,
@@ -28,7 +27,7 @@ import {
 } from '@tanstack/react-query';
 import { useAuthStore } from '@/store';
 
->>>>>>> badd103 (Fix rooms page hooks and socket issues)
+
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -77,10 +76,6 @@ export default function RoomsPage() {
     onError: () => toast.error('Failed to create room'),
     
   });
-<<<<<<< HEAD
-
-  const router = useRouter();
-=======
   const deleteRoomMutation = useMutation({
   mutationFn: (roomId: string) => roomsApi.delete(roomId),
   onSuccess: () => {
@@ -91,7 +86,6 @@ export default function RoomsPage() {
 });
  
 
->>>>>>> badd103 (Fix rooms page hooks and socket issues)
 
   const joinMutation = useMutation({
     mutationFn: async (roomId: string) => {

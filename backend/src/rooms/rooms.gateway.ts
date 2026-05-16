@@ -185,6 +185,18 @@ async handleDisconnect(client: Socket) {
     });
   }
 
+  @SubscribeMessage('focus_tick')
+  handleFocusTick(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string; focus_minutes: number },
+  ) {
+    // Lightweight broadcast — no DB write
+    this.server.to(data.room_id).emit('focus_tick_updated', {
+      userId: client.data.userId,
+      focus_minutes: data.focus_minutes,
+    });
+  }
+
   @SubscribeMessage('typing')
   handleTyping(
     @ConnectedSocket() client: Socket,

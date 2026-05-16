@@ -2,16 +2,21 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Users, ArrowLeft, Play, Pause, RotateCcw, Clock, DoorOpen, Settings, Trash2, AlertTriangle, LayoutDashboard } from 'lucide-react';
 import { useRoomSocket } from '@/hooks/use-room-socket';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useTimerStore } from '@/store';
 import { roomsApi, sessionsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FocusRoom } from '@/types';
 import { toast } from 'sonner';
 
@@ -20,11 +25,13 @@ const STORAGE_KEY = (roomId: string) => `room_timer_${roomId}`;
 type TimerSnapshot = {
   startedAt: string;
   sessionId: string;
+  elapsed?: number; // set on client-nav unmount to avoid counting away-time
 };
 
 export default function RoomInteriorPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const roomId = params.id as string;
   const currentUser = useAuthStore((s) => s.user);
 
@@ -36,10 +43,12 @@ export default function RoomInteriorPage() {
     },
   });
 
-  const { connected, participantList, sendFocusUpdate } = useRoomSocket(roomId);
+  const { connected, participantList, sendFocusUpdate, sendFocusTick } = useRoomSocket(roomId);
 
-  const [seconds, setSeconds] = useState(0);
-  const [running, setRunning] = useState(false);
+  const seconds = useTimerStore((s) => s.seconds);
+  const running = useTimerStore((s) => s.running);
+  const timerVisible = useTimerStore((s) => s.visible);
+  const setTimer = useTimerStore((s) => s.setTimer);
   const [recovery, setRecovery] = useState<TimerSnapshot | null>(null);
   const secondsRef = useRef(seconds);
   secondsRef.current = seconds;
@@ -47,17 +56,30 @@ export default function RoomInteriorPage() {
   const runningRef = useRef(running);
   runningRef.current = running;
 
-  // Restore interrupted timer from localStorage on mount
+  // On client nav back, restore session from store
   useEffect(() => {
+    if (timerVisible && useTimerStore.getState().roomId === roomId) {
+      sessionIdRef.current = useTimerStore.getState().sessionId;
+      return;
+    }
+  }, [roomId, timerVisible]);
+
+  // Restore interrupted timer from localStorage on page refresh
+  useEffect(() => {
+    // If store already has a live session (set above), skip recovery
+    if (sessionIdRef.current) return;
+
     try {
       const raw = localStorage.getItem(STORAGE_KEY(roomId));
       if (!raw) return;
       const saved: TimerSnapshot = JSON.parse(raw);
-      const elapsed = Math.floor((Date.now() - new Date(saved.startedAt).getTime()) / 1000);
-      // Only restore if less than 8 hours old (stale otherwise)
+      const elapsed = saved.elapsed != null
+        ? saved.elapsed
+        : Math.floor((Date.now() - new Date(saved.startedAt).getTime()) / 1000);
       if (elapsed > 0 && elapsed < 28800) {
-        setSeconds(elapsed);
+        setTimer({ seconds: elapsed, running: false });
         sessionIdRef.current = saved.sessionId;
+        syncStore();
         setRecovery(saved);
       } else {
         localStorage.removeItem(STORAGE_KEY(roomId));
@@ -73,6 +95,14 @@ export default function RoomInteriorPage() {
     localStorage.removeItem(STORAGE_KEY(roomId));
   };
 
+  const syncStore = () => {
+    setTimer({
+      visible: sessionIdRef.current != null,
+      sessionId: sessionIdRef.current,
+      roomId,
+    });
+  };
+
   const startSession = async () => {
     try {
       const now = new Date().toISOString();
@@ -84,6 +114,7 @@ export default function RoomInteriorPage() {
       const d = res.data?.data || res.data;
       const sessionId = d?.id || null;
       sessionIdRef.current = sessionId;
+      syncStore();
       if (sessionId) persistTimer({ startedAt: now, sessionId });
     } catch {}
   };
@@ -92,6 +123,7 @@ export default function RoomInteriorPage() {
     const sid = sessionIdRef.current;
     if (!sid) return;
     sessionIdRef.current = null;
+    syncStore();
     clearPersistedTimer();
     try {
       await sessionsApi.endSession(sid, {
@@ -104,6 +136,7 @@ export default function RoomInteriorPage() {
     const sid = sessionIdRef.current;
     if (!sid) return;
     sessionIdRef.current = null;
+    syncStore();
     clearPersistedTimer();
     fetch(`/api/study-sessions/${sid}/end`, {
       method: 'POST',
@@ -116,25 +149,53 @@ export default function RoomInteriorPage() {
     });
   };
 
-  // End session on unmount if running
-  useEffect(() => () => {
-    if (runningRef.current) endSessionFetch();
+  // Save timer on beforeunload (page refresh) so we can recover
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const sid = sessionIdRef.current;
+      if (sid) persistTimer({ startedAt: new Date().toISOString(), sessionId: sid });
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // On client-nav unmount, save with elapsed to avoid counting away-time on recovery
+  useEffect(() => () => {
+    const sid = sessionIdRef.current;
+    if (sid && runningRef.current) {
+      persistTimer({
+        startedAt: new Date().toISOString(),
+        sessionId: sid,
+        elapsed: secondsRef.current,
+      });
+    }
+  }, []);
+
+  // Live focus tick every 2s (lightweight broadcast, no DB write)
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    const id = setInterval(
+      () => sendFocusTick(Math.floor(secondsRef.current / 60)),
+      2000,
+    );
     return () => clearInterval(id);
-  }, [running]);
+  }, [running, sendFocusTick]);
 
+  // Persist focus minutes to DB every 10s
   useEffect(() => {
     if (!running) return;
     const id = setInterval(
       () => sendFocusUpdate(Math.floor(secondsRef.current / 60)),
-      30000,
+      10000,
     );
     return () => clearInterval(id);
   }, [running, sendFocusUpdate]);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editType, setEditType] = useState('silent_focus');
+  const [editMax, setEditMax] = useState(5);
+  const [editPrivate, setEditPrivate] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: () => roomsApi.delete(roomId),
@@ -145,18 +206,37 @@ export default function RoomInteriorPage() {
     onError: () => toast.error('Failed to delete room'),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => roomsApi.update(roomId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['room', roomId] });
+      toast.success('Room updated!');
+      setEditOpen(false);
+    },
+    onError: () => toast.error('Failed to update room'),
+  });
+
   const isCreator = currentUser?.id === room?.created_by;
+
+  const openEdit = () => {
+    if (!room) return;
+    setEditName(room.name);
+    setEditType(room.room_type);
+    setEditMax(room.max_participants);
+    setEditPrivate(room.is_private);
+    setEditOpen(true);
+  };
 
   const handleStart = () => {
     setRecovery(null);
-    setRunning(true);
+    setTimer({ running: true, seconds: 0 });
     startSession();
   };
 
   const handleResume = () => {
     setRecovery(null);
     persistTimer({ startedAt: new Date().toISOString(), sessionId: sessionIdRef.current! });
-    setRunning(true);
+    setTimer({ running: true });
   };
 
   const handleRecoveryEnd = async () => {
@@ -167,28 +247,29 @@ export default function RoomInteriorPage() {
       } catch {}
     }
     sessionIdRef.current = null;
+    syncStore();
     clearPersistedTimer();
     setRecovery(null);
-    setSeconds(0);
+    setTimer({ seconds: 0 });
     toast.success('Session ended');
   };
 
   const handleRecoveryDiscard = () => {
     sessionIdRef.current = null;
+    syncStore();
     clearPersistedTimer();
     setRecovery(null);
-    setSeconds(0);
+    setTimer({ seconds: 0 });
   };
 
   const handlePause = () => {
-    setRunning(false);
+    setTimer({ running: false });
     endSession(secondsRef.current);
   };
 
   const handleReset = () => {
-    setRunning(false);
+    setTimer({ running: false, seconds: 0 });
     endSession(secondsRef.current);
-    setSeconds(0);
   };
 
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
@@ -207,7 +288,7 @@ export default function RoomInteriorPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <><div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -221,7 +302,7 @@ export default function RoomInteriorPage() {
         <div className="flex items-center gap-2">
           {isCreator && (
             <>
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => router.push(`/rooms/${roomId}/edit`)}>
+              <Button variant="outline" size="sm" className="gap-2" onClick={openEdit}>
                 <Settings className="h-4 w-4" /> Edit
               </Button>
               <Button variant="destructive" size="sm" className="gap-2" onClick={() => { if (confirm('Delete this room?')) deleteMutation.mutate(); }} disabled={deleteMutation.isPending}>
@@ -356,6 +437,47 @@ export default function RoomInteriorPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Room</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ name: editName, room_type: editType, max_participants: editMax, is_private: editPrivate }); }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Room Name</Label>
+              <Input id="name" value={editName} onChange={(e) => setEditName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="type">Type</Label>
+              <Select value={editType} onValueChange={setEditType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="silent_focus">Silent Focus</SelectItem>
+                  <SelectItem value="study_group">Study Group</SelectItem>
+                  <SelectItem value="pomodoro">Pomodoro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max">Max Participants</Label>
+              <Input id="max" type="number" min={2} max={50} value={editMax} onChange={(e) => setEditMax(Number(e.target.value))} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="private" checked={editPrivate} onCheckedChange={(v) => setEditPrivate(v === true)} />
+              <Label htmlFor="private">Private room</Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={updateMutation.isPending || !editName.trim()}>
+                {updateMutation.isPending ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

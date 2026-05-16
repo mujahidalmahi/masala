@@ -91,10 +91,9 @@ export default function StudySessionsPage() {
   const topicList: any[] = Array.isArray(topics) ? topics : [];
 
   const endMutation = useMutation({
-    mutationFn: ({ id, elapsedSecs }: { id: string; elapsedSecs: number }) =>
+    mutationFn: ({ id }: { id: string }) =>
       sessionsApi.endSession(id, {
         ended_at: new Date().toISOString(),
-        duration_minutes: Math.max(1, Math.round(elapsedSecs / 60)),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['study-sessions'] });
@@ -107,10 +106,10 @@ export default function StudySessionsPage() {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
   }, []);
 
-  const endActiveSession = useCallback((secs: number) => {
+  const endActiveSession = useCallback(() => {
     const sid = sessionIdRef.current;
     sessionIdRef.current = null;
-    if (sid) endMutation.mutate({ id: sid, elapsedSecs: Math.max(1, secs) });
+    if (sid) endMutation.mutate({ id: sid });
   }, [endMutation]);
 
   useEffect(() => {
@@ -120,7 +119,6 @@ export default function StudySessionsPage() {
           `/api/study-sessions/${sessionIdRef.current}/end`,
           new Blob([JSON.stringify({
             ended_at: new Date().toISOString(),
-            duration_minutes: Math.max(1, Math.round(elapsedRef.current / 60)),
           })], { type: 'application/json' }),
         );
       }
@@ -141,7 +139,7 @@ export default function StudySessionsPage() {
     if (next >= maxSecs) {
       clearTimer();
       if (isFocus) {
-        endActiveSession(next);
+        endActiveSession();
         toast.success(`Focus complete! (${focusDurationRef.current} min)`);
         if (currentSetRef.current < setsRef.current) {
           currentSetRef.current += 1;
@@ -208,15 +206,14 @@ export default function StudySessionsPage() {
   };
 
   const endEarly = () => {
-    const secs = elapsedRef.current;
     clearTimer();
-    endActiveSession(secs);
+    endActiveSession();
     currentSetRef.current = 0;
     setPhase('idle');
     setElapsed(0);
     elapsedRef.current = 0;
     setPaused(false);
-    toast.success(`Session saved (${Math.max(1, Math.round(secs / 60))} min studied)`);
+    toast.success('Session saved');
   };
 
   const skipBreak = () => {

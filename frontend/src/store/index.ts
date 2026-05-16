@@ -79,6 +79,28 @@ export const useUIStore = create<UIState>()((set) => ({
   setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
 }));
 
+interface TimerState {
+  visible: boolean;
+  seconds: number;
+  running: boolean;
+  sessionId: string | null;
+  roomId: string | null;
+  setTimer: (data: Partial<TimerState>) => void;
+  tick: () => void;
+  clearTimer: () => void;
+}
+
+export const useTimerStore = create<TimerState>()((set) => ({
+  visible: false,
+  seconds: 0,
+  running: false,
+  sessionId: null,
+  roomId: null,
+  setTimer: (data) => set(data),
+  tick: () => set((state) => ({ seconds: state.seconds + 1 })),
+  clearTimer: () => set({ visible: false, seconds: 0, running: false, sessionId: null, roomId: null }),
+}));
+
 export function useHydrated(): boolean {
   const [hydrated, setHydrated] = useState(false);
 

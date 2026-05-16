@@ -6,6 +6,7 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuthStore, useUIStore, useHydrated } from '@/store';
 import { DashboardSidebar } from '@/components/shared/dashboard-sidebar';
 import { DashboardNavbar } from '@/components/shared/dashboard-navbar';
+import { FloatingTimer } from '@/components/shared/floating-timer';
 import { Loader2 } from 'lucide-react';
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
@@ -59,6 +60,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       <div className={`transition-all duration-300 ${isMobile ? 'ml-0' : sidebarOpen ? 'ml-60' : 'ml-16'}`}>
         <DashboardNavbar onMenuClick={handleMenuClick} />
         <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <FloatingTimer />
       </div>
     </div>
   );

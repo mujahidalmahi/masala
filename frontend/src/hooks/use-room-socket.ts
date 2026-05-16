@@ -82,13 +82,16 @@ export function useRoomSocket(roomId: string | null) {
       setParticipantList((prev) => prev.filter((p) => p.user_id !== data.userId));
     });
 
-    socket.on('focus_updated', (data: { userId: string; focus_minutes: number }) => {
+    const handleFocusUpdated = (data: { userId: string; focus_minutes: number }) => {
       setParticipantList((prev) =>
         prev.map((p) =>
           p.user_id === data.userId ? { ...p, focus_minutes: data.focus_minutes } : p,
         ),
       );
-    });
+    };
+
+    socket.on('focus_updated', handleFocusUpdated);
+    socket.on('focus_tick_updated', handleFocusUpdated);
 
     socket.on('new_message', (msg: RoomMessage) => {
       setMessages((prev) => [...prev, msg]);
@@ -111,6 +114,8 @@ export function useRoomSocket(roomId: string | null) {
     messages,
     sendFocusUpdate: (focus_minutes: number) =>
       socketRef.current?.emit('focus_update', { room_id: roomId, focus_minutes }),
+    sendFocusTick: (focus_minutes: number) =>
+      socketRef.current?.emit('focus_tick', { room_id: roomId, focus_minutes }),
     sendMessage: (message: string) =>
       socketRef.current?.emit('send_message', { room_id: roomId, message }),
   };

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useAuthStore, useUIStore, useHydrated } from '@/store';
+import { usersApi } from '@/lib/api';
 import { DashboardSidebar } from '@/components/shared/dashboard-sidebar';
 import { DashboardNavbar } from '@/components/shared/dashboard-navbar';
 import { FloatingTimer } from '@/components/shared/floating-timer';
@@ -12,7 +13,7 @@ import { Loader2 } from 'lucide-react';
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const hydrated = useHydrated();
-  const { user, token } = useAuthStore();
+  const { user, token, updateUser } = useAuthStore();
   const { sidebarOpen, mobileSidebarOpen, setSidebarOpen, setMobileSidebarOpen } = useUIStore();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
@@ -32,6 +33,22 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       setSidebarOpen(true);
     }
   }, [isMobile, setSidebarOpen]);
+
+  // Refresh profile from server so navbar XP stays in sync
+  const refreshProfile = useCallback(async () => {
+    try {
+      const res = await usersApi.getProfile();
+      const profile = res.data?.data || res.data;
+      if (profile?.xp_total != null) updateUser({ xp_total: profile.xp_total });
+    } catch {}
+  }, [updateUser]);
+
+  useEffect(() => {
+    refreshProfile();
+    const onFocus = () => refreshProfile();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [refreshProfile]);
 
   const handleMenuClick = () => {
     if (isMobile) {

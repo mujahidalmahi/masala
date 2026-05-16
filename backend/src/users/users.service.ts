@@ -28,14 +28,10 @@ export class UsersService {
   }
 
   async getDashboard(userId: string) {
-    const [profile, todayLog, streak, weakAreas] = await Promise.all([
+    const today = new Date().toISOString().split('T')[0];
+
+    const [profile, streak, weakAreas, todaySessions, todayQuizzes] = await Promise.all([
       this.getProfile(userId),
-      this.supabase
-        .from('daily_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('log_date', new Date().toISOString().split('T')[0])
-        .maybeSingle(),
       this.supabase
         .from('streak_records')
         .select('*')
@@ -43,7 +39,25 @@ export class UsersService {
         .maybeSingle(),
       this.supabase
         .rpc('get_weak_topics', { p_user_id: userId, p_limit: 5 }),
+      this.supabase
+        .from('study_sessions')
+        .select('*, subjects(name), chapters(name), topics(name)')
+        .eq('user_id', userId)
+        .gte('started_at', today)
+        .lte('started_at', today + 'T23:59:59.999Z')
+        .order('started_at', { ascending: false }),
+      this.supabase
+        .from('quiz_attempts')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .gte('completed_at', today)
+        .lte('completed_at', today + 'T23:59:59.999Z'),
     ]);
+
+    const todaySessionList = todaySessions.data || [];
+    const totalMinutes = todaySessionList.reduce((s: number, r: any) => s + (r.duration_minutes || 0), 0);
+    const todayQuizList = todayQuizzes.data || [];
 
     const { data: recentSessions } = await this.supabase
       .from('study_sessions')
@@ -57,7 +71,11 @@ export class UsersService {
 
     return {
       profile,
-      today: todayLog?.data || null,
+      today: {
+        total_minutes: totalMinutes,
+        session_count: todaySessionList.length,
+        quiz_count: todayQuizList.length,
+      },
       streak: streak?.data || null,
       weak_areas: weakAreas.data || [],
       recent_sessions: recentSessions || [],

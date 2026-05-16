@@ -1,8 +1,22 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { useEffect, useState } from 'react';
 import { User } from '@/types';
+
+const ssrSafeStorage = {
+  getItem: (name: string) => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem(name);
+  },
+  setItem: (name: string, value: string) => {
+    if (typeof window !== 'undefined') localStorage.setItem(name, value);
+  },
+  removeItem: (name: string) => {
+    if (typeof window !== 'undefined') localStorage.removeItem(name);
+  },
+};
 
 interface AuthState {
   user: User | null;
@@ -15,8 +29,8 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
+    persist(
+      (set, get) => ({
       user: null,
       token: null,
 
@@ -43,6 +57,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'studysprint-auth',
+      storage: createJSONStorage(() => ssrSafeStorage),
       partialize: (state) => ({ user: state.user, token: state.token }),
     },
   ),
@@ -63,3 +78,18 @@ export const useUIStore = create<UIState>()((set) => ({
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setMobileSidebarOpen: (open) => set({ mobileSidebarOpen: open }),
 }));
+
+export function useHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (useAuthStore.persist.hasHydrated()) {
+      setHydrated(true);
+      return;
+    }
+    const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+    return () => { unsub(); };
+  }, []);
+
+  return hydrated;
+}

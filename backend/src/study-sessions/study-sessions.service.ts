@@ -38,9 +38,12 @@ export class StudySessionsService {
     if (!session) throw new NotFoundException('Session not found');
     if (session.ended_at) throw new NotFoundException('Session already ended');
 
+    const updates: any = { ended_at: dto.ended_at, notes: dto.notes || session.notes };
+    if (dto.duration_minutes) updates.duration_minutes = dto.duration_minutes;
+
     const { data, error } = await this.supabase
       .from('study_sessions')
-      .update({ ended_at: dto.ended_at, notes: dto.notes || session.notes })
+      .update(updates)
       .eq('id', sessionId)
       .select()
       .single();
@@ -75,35 +78,41 @@ export class StudySessionsService {
   }
 
   async getStats(userId: string) {
-    const today = new Date().toISOString().split('T')[0];
-    const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
+    const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const yearAgo = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
 
-    const [todayStats, weekStats, subjectStats] = await Promise.all([
-      this.supabase
-        .from('daily_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('log_date', today)
-        .maybeSingle(),
-      this.supabase
-        .from('daily_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('log_date', weekAgo)
-        .lte('log_date', today)
-        .order('log_date'),
-      this.supabase
+    const agg = async (start: string, end: string) => {
+      const { data } = await this.supabase
         .from('study_sessions')
-        .select('subject_id, subjects(name), duration_minutes')
+        .select('duration_minutes, xp_earned')
         .eq('user_id', userId)
-        .gte('started_at', weekAgo)
-        .order('started_at', { ascending: false }),
+        .gte('started_at', start)
+        .lte('started_at', end);
+      const rows = data || [];
+      return {
+        total_minutes: rows.reduce((s, r) => s + (r.duration_minutes || 0), 0),
+        session_count: rows.length,
+        total_xp: rows.reduce((s, r) => s + (r.xp_earned || 0), 0),
+      };
+    };
+
+    const [todayRes, weekRes, monthRes, yearRes, allRes] = await Promise.all([
+      agg(today, today + 'T23:59:59.999Z'),
+      agg(weekAgo, today + 'T23:59:59.999Z'),
+      agg(monthAgo, today + 'T23:59:59.999Z'),
+      agg(yearAgo, today + 'T23:59:59.999Z'),
+      agg('1970-01-01', today + 'T23:59:59.999Z'),
     ]);
 
     return {
-      today: todayStats.data || null,
-      week: weekStats.data || [],
-      by_subject: subjectStats.data || [],
+      today: todayRes,
+      week: weekRes,
+      month: monthRes,
+      year: yearRes,
+      all: allRes,
     };
   }
 }

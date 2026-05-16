@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   Brain, Zap, Trophy, Users, BookOpen, Target,
-  BarChart3, Clock, ChevronRight, Star, Sparkles,
+  BarChart3, Clock, ChevronRight, Sparkles,
   Shield, Layers, Gamepad2, ScrollText, ArrowRight,
   GraduationCap, Flame,
 } from 'lucide-react';

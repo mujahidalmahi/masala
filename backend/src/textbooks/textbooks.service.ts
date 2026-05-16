@@ -39,12 +39,12 @@ export class TextbooksService {
 
       if (uploadError) throw new BadRequestException(`Upload failed: ${uploadError.message}`);
 
-      const { data: urlData } = await this.supabase
+      const { data: signedUrlData } = await this.supabase
         .storage()
         .from('textbooks')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365);
 
-      fileUrl = urlData?.publicUrl || null;
+      fileUrl = signedUrlData?.signedUrl || null;
     }
 
     const { data, error } = await this.supabase
@@ -110,10 +110,10 @@ export class TextbooksService {
 
     if (uploadError) throw new BadRequestException(`Upload failed: ${uploadError.message}`);
 
-    const { data: urlData } = await this.supabase
+    const { data: signedUrlData } = await this.supabase
       .storage()
       .from('uploads')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 60 * 60 * 24 * 365);
 
     const { data, error } = await this.supabase
       .from('uploaded_files')
@@ -123,7 +123,7 @@ export class TextbooksService {
         chapter_id: metadata.chapter_id || null,
         topic_id: metadata.topic_id || null,
         file_name: file.originalname,
-        file_url: urlData?.publicUrl || '',
+        file_url: signedUrlData?.signedUrl || '',
         file_type: file.mimetype,
         file_size: file.size,
         file_category: metadata.file_category || 'note',

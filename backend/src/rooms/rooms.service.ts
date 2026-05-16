@@ -160,6 +160,22 @@ export class RoomsService {
     return (data || []).reverse();
   }
 
+  async saveMessage(userId: string, roomId: string, message: string) {
+    const { data, error } = await this.supabase
+      .from('room_messages')
+      .insert({
+        room_id: roomId,
+        user_id: userId,
+        message,
+        message_type: 'user',
+      })
+      .select('*, profiles(username, display_name, avatar_url)')
+      .single();
+
+    if (error) throw new BadRequestException('Failed to save message');
+    return data;
+  }
+
   async updateFocusMinutes(userId: string, roomId: string, minutes: number) {
     const { error } = await this.supabase
       .from('room_participants')

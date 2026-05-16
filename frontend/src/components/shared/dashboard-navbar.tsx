@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
-  Menu, Bell, LogOut, Settings, ChevronDown, Zap,
+  Menu, LogOut, ChevronDown, Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +24,6 @@ interface NavbarProps {
 export function DashboardNavbar({ onMenuClick }: NavbarProps) {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const [notifications] = useState<string[]>([]);
 
   const handleLogout = () => {
     logout();
@@ -47,21 +44,6 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
       <div className="flex-1" />
 
       <div className="flex items-center gap-2 sm:gap-3">
-        <motion.div whileHover={{ scale: 1.05 }} className="relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground relative"
-          >
-            <Bell className="h-5 w-5" />
-            {notifications.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center">
-                {notifications.length}
-              </span>
-            )}
-          </Button>
-        </motion.div>
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-accent">
@@ -73,7 +55,9 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
               </Avatar>
               <div className="hidden sm:flex flex-col items-start">
                 <span className="text-sm font-medium text-foreground">{user?.display_name || user?.username}</span>
-                <span className="text-[10px] text-muted-foreground">{user?.xp_total?.toLocaleString()} XP</span>
+                {user?.role !== 'admin' && (
+                  <span className="text-[10px] text-muted-foreground">{user?.xp_total?.toLocaleString()} XP</span>
+                )}
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground hidden sm:block" />
             </Button>
@@ -86,22 +70,6 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem
-              onClick={() => router.push('/settings')}
-              className="text-muted-foreground hover:text-foreground focus:text-foreground cursor-pointer"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </DropdownMenuItem>
-            {user?.role === 'admin' && (
-              <DropdownMenuItem
-                onClick={() => router.push('/admin/dashboard')}
-                className="text-muted-foreground hover:text-foreground focus:text-foreground cursor-pointer"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Admin Panel
-              </DropdownMenuItem>
-            )}
             <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuItem
               onClick={handleLogout}

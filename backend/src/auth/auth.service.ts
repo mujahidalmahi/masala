@@ -67,7 +67,7 @@ export class AuthService {
       this.logger.error(`Profile update failed: ${profileError.message}`);
     }
 
-    const token = this.generateToken(userId, dto.email);
+    const token = this.generateToken(userId, dto.email, 'user');
 
     return {
       user: {
@@ -103,7 +103,8 @@ export class AuthService {
       .eq('id', userId)
       .single();
 
-    const token = this.generateToken(userId, dto.email);
+    const role = profile?.role || 'user';
+    const token = this.generateToken(userId, dto.email, role);
 
     return {
       user: {
@@ -115,13 +116,13 @@ export class AuthService {
         xp_total: profile?.xp_total || 0,
         level_id: profile?.level_id || 1,
         current_streak: profile?.current_streak || 0,
-        role: profile?.role || 'user',
+        role,
       },
       access_token: token,
     };
   }
 
-  private generateToken(userId: string, email: string): string {
-    return this.jwtService.sign({ sub: userId, email });
+  private generateToken(userId: string, email: string, role?: string): string {
+    return this.jwtService.sign({ sub: userId, email, role: role || 'user' });
   }
 }

@@ -36,7 +36,6 @@ const adminNavItems: NavItem[] = [
   { label: 'Questions', href: '/admin/questions', icon: Brain },
   { label: 'Badges', href: '/admin/badges', icon: Flame },
   { label: 'Rooms', href: '/admin/rooms', icon: GraduationCap },
-  { label: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
 interface SidebarProps {

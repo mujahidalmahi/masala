@@ -3,21 +3,26 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { useAuthStore, useUIStore } from '@/store';
+import { useAuthStore, useUIStore, useHydrated } from '@/store';
 import { DashboardSidebar } from '@/components/shared/dashboard-sidebar';
 import { DashboardNavbar } from '@/components/shared/dashboard-navbar';
+import { Loader2 } from 'lucide-react';
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const hydrated = useHydrated();
   const { user, token } = useAuthStore();
   const { sidebarOpen, mobileSidebarOpen, setSidebarOpen, setMobileSidebarOpen } = useUIStore();
   const isMobile = useMediaQuery('(max-width: 767px)');
 
   useEffect(() => {
+    if (!hydrated) return;
     if (!token || !user) {
       router.push('/login');
+    } else if (user.role === 'admin') {
+      router.push('/admin/dashboard');
     }
-  }, [token, user, router]);
+  }, [hydrated, token, user, router]);
 
   useEffect(() => {
     if (isMobile) {
@@ -35,7 +40,13 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     }
   };
 
-  if (!token || !user) return null;
+  if (!hydrated || !token || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -2,7 +2,9 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-RUN apk add --no-cache chromium chromium-chromedriver
+FROM node:22-alpine AS build
+
+WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -14,11 +16,7 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-RUN apk add --no-cache chromium chromium-chromedriver \
-  && apk add --no-cache tini
-
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-  NODE_ENV=production
+ENV NODE_ENV=production
 
 RUN addgroup -g 1001 -S appgroup \
   && adduser -S appuser -u 1001 -G appgroup
@@ -31,5 +29,4 @@ USER appuser
 
 EXPOSE 4000
 
-ENTRYPOINT ["tini", "--"]
 CMD ["node", "dist/main"]

@@ -60,11 +60,15 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.data.userId;
     if (!userId) return;
 
-    this.roomUserMap.forEach((users, roomId) => {
+    this.roomUserMap.forEach(async (users, roomId) => {
       if (users.has(userId)) {
         users.delete(userId);
         if (users.size === 0) this.roomUserMap.delete(roomId);
+        try {
+          await this.roomsService.leaveRoom(userId, roomId);
+        } catch { }
         this.server.to(roomId).emit('participant_left', { userId });
+        this.server.to(roomId).emit('participant_count', { count: users.size });
       }
     });
 
@@ -139,11 +143,9 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const userId = client.data.userId;
 
-    this.server.to(data.room_id).emit('new_message', {
-      user_id: userId,
-      message: data.message,
-      created_at: new Date().toISOString(),
-    });
+    const saved = await this.roomsService.saveMessage(userId, data.room_id, data.message);
+
+    this.server.to(data.room_id).emit('new_message', saved);
   }
 
   @SubscribeMessage('focus_update')
@@ -153,7 +155,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const userId = client.data.userId;
 
-    await this.roomsService.updateFocusMinutes(userId, data.room_id, data.focus_minutes);
+    try {
+      await this.roomsService.updateFocusMinutes(userId, data.room_id, data.focus_minutes);
+    } catch (error) {
+      client.emit('error', { message: (error as Error).message });
+      return;
+    }
 
     this.server.to(data.room_id).emit('focus_updated', {
       userId,

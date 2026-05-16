@@ -1,7 +1,10 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UsePipes } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { AdminGuard } from '../common/guards/admin.guard';
 import { AdminService } from './admin.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtPayload } from '../common/types';
+
+@UseGuards(AdminGuard)
 
 @Controller('api/admin')
 export class AdminController {
@@ -109,4 +112,10 @@ export class AdminController {
   deleteBadge(@Param('id') id: string) {
     return this.adminService.deleteBadge(id);
   }
+
+  @Patch('rooms/:id/toggle')
+  toggleRoom(@Param('id') id: string) {
+    return this.adminService.toggleRoom(id);
+  }
+
 }

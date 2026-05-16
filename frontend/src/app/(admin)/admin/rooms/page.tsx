@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Users, Radio, DoorOpen } from 'lucide-react';
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
-import { roomsApi } from '@/lib/api';
+import { adminApi, roomsApi } from '@/lib/api';
 import { FocusRoom } from '@/types';
 import { getInitials } from '@/lib/utils';
 
@@ -36,15 +36,24 @@ const roomTypeColors: Record<string, string> = {
 };
 
 export default function AdminRooms() {
+  const queryClient = useQueryClient();
   const { data: roomsData, isLoading } = useQuery({
     queryKey: ['admin-rooms'],
-    queryFn: () => roomsApi.getActive().then((r) => r.data),
+    queryFn: async () => { const r = await roomsApi.getActive(); return r.data.data || r.data; },
+  });
+  const rooms: FocusRoom[] = Array.isArray(roomsData) ? roomsData : [];
+
+  const toggleMutation = useMutation({
+    mutationFn: (id: string) => adminApi.toggleRoom(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-rooms'] });
+      toast.success('Room status toggled');
+    },
+    onError: () => toast.error('Failed to toggle room'),
   });
 
-  const rooms: FocusRoom[] = Array.isArray(roomsData) ? roomsData : (roomsData?.rooms ?? []);
-
   const handleToggle = (room: FocusRoom) => {
-    toast.info(`Toggle room status — endpoint needed: ${room.id}`);
+    toggleMutation.mutate(room.id);
   };
 
   return (

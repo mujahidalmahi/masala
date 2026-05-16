@@ -40,52 +40,39 @@ database/
 
 ### 1. Run Migrations in Order
 
-Execute the migration files in numeric order in the Supabase SQL Editor:
+Open the Supabase SQL Editor and copy-paste the contents of each file **in order**:
 
-```sql
--- 1. Core schema (enables extensions, creates curriculum + profiles)
-\i database/migrations/001_schema_core.sql
+| Step | File |
+|------|------|
+| 1 | `migrations/001_schema_core.sql` |
+| 2 | `migrations/002_schema_tracking.sql` |
+| 3 | `migrations/003_schema_gamification.sql` |
+| 4 | `migrations/004_schema_questions.sql` |
+| 5 | `migrations/005_schema_rooms.sql` |
+| 6 | `migrations/006_schema_predictions.sql` |
+| 7 | `migrations/007_indexes.sql` |
 
--- 2. Study tracking
-\i database/migrations/002_schema_tracking.sql
-
--- 3. Gamification
-\i database/migrations/003_schema_gamification.sql
-
--- 4. Questions and quizzes
-\i database/migrations/004_schema_questions.sql
-
--- 5. Focus rooms
-\i database/migrations/005_schema_rooms.sql
-
--- 6. Predictions and reports
-\i database/migrations/006_schema_predictions.sql
-
--- 7. Performance indexes
-\i database/migrations/009_indexes.sql
-```
+> **Note:** `\i` commands only work in `psql`. In the Supabase SQL Editor, open each file and copy-paste its contents.
 
 ### 2. Deploy Functions
 
-```sql
-\i database/functions/001_xp_functions.sql
-\i database/functions/002_streak_functions.sql
-\i database/functions/003_mastery_functions.sql
-\i database/functions/004_quiz_functions.sql
-\i database/functions/005_leaderboard_functions.sql
-```
+Copy-paste each file:
+
+| Order | File |
+|-------|------|
+| 1 | `functions/001_xp_functions.sql` |
+| 2 | `functions/002_streak_functions.sql` |
+| 3 | `functions/003_mastery_functions.sql` |
+| 4 | `functions/004_quiz_functions.sql` |
+| 5 | `functions/005_leaderboard_functions.sql` |
 
 ### 3. Enable RLS
 
-```sql
-\i database/policies/001_rls_policies.sql
-```
+Copy-paste `policies/001_rls_policies.sql`
 
 ### 4. Seed Data (Optional)
 
-```sql
-\i database/seed/010_seed_data.sql
-```
+Copy-paste `seed/010_seed_data.sql`
 
 ## Key Tables
 

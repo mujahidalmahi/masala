@@ -7,7 +7,7 @@ import {
   Body,
   UseInterceptors,
   UploadedFile,
-  UsePipes,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TextbooksService } from './textbooks.service';
@@ -16,12 +16,26 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtPayload } from '../common/types';
 
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+
+const textbookFileFilter = (_req: any, file: Express.Multer.File, cb: (error: Error | null, acceptFile: boolean) => void) => {
+  const allowed = ['application/pdf', 'application/epub+zip', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg', 'image/webp'];
+  if (allowed.includes(file.mimetype)) return cb(null, true);
+  cb(new BadRequestException(`Unsupported file type: ${file.mimetype}`), false);
+};
+
+const uploadFileFilter = (_req: any, file: Express.Multer.File, cb: (error: Error | null, acceptFile: boolean) => void) => {
+  const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'text/plain'];
+  if (allowed.includes(file.mimetype)) return cb(null, true);
+  cb(new BadRequestException(`Unsupported file type: ${file.mimetype}`), false);
+};
+
 @Controller('api/textbooks')
 export class TextbooksController {
   constructor(private textbooksService: TextbooksService) {}
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_SIZE }, fileFilter: textbookFileFilter }))
   async uploadTextbook(
     @CurrentUser() user: JwtPayload,
     @Body(new ZodValidationPipe(UploadTextbookSchema)) body: any,
@@ -46,7 +60,7 @@ export class FilesController {
   constructor(private textbooksService: TextbooksService) {}
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: MAX_FILE_SIZE }, fileFilter: uploadFileFilter }))
   async uploadFile(
     @CurrentUser() user: JwtPayload,
     @UploadedFile() file: Express.Multer.File,

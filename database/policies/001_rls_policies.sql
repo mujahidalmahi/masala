@@ -1,5 +1,17 @@
 -- ============================================================================
 -- StudySprint OS - Row Level Security Policies
+--
+-- IMPORTANT: The NestJS backend uses the Supabase service_role key for all
+-- database operations (from(), rpc(), storage()). This means RLS policies
+-- are BYPASSED when requests go through the backend API.
+--
+-- These policies exist as a defense-in-depth layer:
+--   - They protect data if accessed directly via Supabase anon key
+--   - They enable direct client-side Supabase usage in the future
+--   - They document intended access patterns
+--
+-- For the current architecture (all requests through backend), access control
+-- is enforced by NestJS guards (@CurrentUser(), JwtAuthGuard, role checks).
 -- ============================================================================
 
 -- Enable RLS on all tables
@@ -390,10 +402,29 @@ CREATE POLICY "Users can create own reports"
     WITH CHECK (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
--- STORAGE: files bucket policies
+-- STORAGE: textbooks and uploads buckets (private)
+-- Folders are structured as {userId}/{filename}
 -- ---------------------------------------------------------------------------
--- Note: Run these in Supabase Dashboard SQL editor
--- CREATE POLICY "Give users access to own folder"
---     ON storage.objects FOR ALL
---     USING (auth.uid()::text = (storage.foldername(name))[1])
---     WITH CHECK (auth.uid()::text = (storage.foldername(name))[1]);
+CREATE POLICY "Users can read own textbooks"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'textbooks' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can upload their own textbooks"
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'textbooks' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can delete own textbooks"
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'textbooks' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can read own uploaded files"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'uploads' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can upload their own files"
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'uploads' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can delete own uploaded files"
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'uploads' AND auth.uid()::text = (storage.foldername(name))[1]);

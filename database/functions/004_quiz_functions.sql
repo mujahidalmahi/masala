@@ -36,7 +36,7 @@ BEGIN
 
     FOR v_question IN
         SELECT id, points FROM public.questions
-        WHERE topic_id = p_topic_id
+        WHERE topic_id = p_topic_id AND is_verified = true
         ORDER BY random()
         LIMIT p_question_count
     LOOP

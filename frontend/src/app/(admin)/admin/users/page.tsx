@@ -41,10 +41,9 @@ export default function AdminUsers() {
 
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: () => adminApi.getUsers().then((r) => r.data),
+    queryFn: async () => { const r = await adminApi.getUsers(); return r.data.data || r.data; },
   });
-
-  const users: User[] = Array.isArray(usersData) ? usersData : (usersData?.users ?? []);
+  const users: User[] = usersData?.data ?? [];
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => adminApi.updateUser(id, data),
@@ -82,8 +81,8 @@ export default function AdminUsers() {
 
   const filtered = users.filter(
     (u) =>
-      u.display_name?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()),
+      (u.display_name ?? u.username ?? '')?.toLowerCase().includes(search.toLowerCase()) ||
+      (u.email ?? '')?.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (

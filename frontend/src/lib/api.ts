@@ -20,6 +20,7 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && typeof window !== 'undefined' && !isAuthRoute) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
+      document.cookie = 'access_token=; path=/; max-age=0';
       window.location.href = '/login';
     }
     return Promise.reject(err);
@@ -185,6 +186,10 @@ export const adminApi = {
 
   // Stats
   getStats: () => api.get('/api/admin/stats'),
+
+  // Rooms
+  toggleRoom: (id: string) => api.patch(`/api/admin/rooms/${id}/toggle`),
+
 };
 
 export default api;

@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   Zap, Flame, Trophy, Award, Medal, Target, BadgeCheck,
-  TrendingUp, Star, Crown, Swords,
+  TrendingUp, Crown, Swords,
 } from 'lucide-react';
+import { useAuthStore } from '@/store';
 import { gamificationApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,7 @@ const itemVariants = {
 };
 
 export default function GamificationPage() {
+  const currentUser = useAuthStore((s) => s.user);
   const { data: profile, isLoading: profileLoading, error: profileError } = useQuery<GamificationProfile>({
     queryKey: ['gamification-profile'],
     queryFn: async () => {
@@ -155,7 +157,7 @@ export default function GamificationPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xl sm:text-2xl font-bold text-foreground">
-                  {leaderboard?.find((e) => e.user_id === profile?.level_id?.toString())?.rank || '-'}
+                  {leaderboard?.find((e) => e.user_id === currentUser?.id)?.rank || '-'}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">On leaderboard</p>
               </CardContent>

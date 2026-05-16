@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class PredictionService {
       p_subject_id: subjectId || null,
     });
 
-    if (error) throw new Error('Failed to generate prediction');
+    if (error) throw new InternalServerErrorException('Failed to generate prediction');
     return data;
   }
 

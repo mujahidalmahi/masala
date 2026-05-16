@@ -25,8 +25,6 @@ services:
         value: 7d
       - key: CORS_ORIGIN
         value: https://your-frontend.vercel.app
-      - key: PUPPETEER_EXECUTABLE_PATH
-        value: /usr/bin/chromium
     healthCheckPath: /api/health
     numInstances: 1
     plan: starter

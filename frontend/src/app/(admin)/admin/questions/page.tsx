@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Loader2 } from 'lucide-react';
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from '@/components/ui/card';
@@ -22,8 +22,8 @@ import {
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
-import { adminApi } from '@/lib/api';
-import { Question } from '@/types';
+import { adminApi, curriculumApi } from '@/lib/api';
+import { Question, Subject, Chapter, Topic } from '@/types';
 import { getDifficultyLabel } from '@/lib/utils';
 
 const container = {
@@ -39,10 +39,11 @@ const questionTypes: { value: Question['question_type']; label: string }[] = [
   { value: 'true_false', label: 'True/False' },
 ];
 
-function QuestionForm({ form, setForm, options, setOptions }: {
+function QuestionForm({ form, setForm, options, setOptions, subjects, chapters, topics }: {
   form: any; setForm: (f: any) => void;
   options: { option_text: string; is_correct: boolean }[];
   setOptions: (o: { option_text: string; is_correct: boolean }[]) => void;
+  subjects: Subject[]; chapters: Chapter[]; topics: Topic[];
 }) {
   return (
     <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
@@ -82,15 +83,48 @@ function QuestionForm({ form, setForm, options, setOptions }: {
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div className="space-y-2">
-          <Label>Points</Label>
-          <Input type="number" value={form.points} onChange={(e) => setForm((f: any) => ({ ...f, points: parseInt(e.target.value) || 0 }))} className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
-        </div>
-        <div className="space-y-2">
-          <Label>Topic ID</Label>
-          <Input value={form.topic_id} onChange={(e) => setForm((f: any) => ({ ...f, topic_id: e.target.value }))} className="bg-muted border-border text-foreground placeholder:text-muted-foreground" placeholder="topic_id" />
-        </div>
+      <div className="space-y-2">
+        <Label>Subject</Label>
+        <Select value={form.subject_id} onValueChange={(v) => setForm((f: any) => ({ ...f, subject_id: v, chapter_id: '', topic_id: '' }))}>
+          <SelectTrigger className="bg-muted border-border text-foreground">
+            <SelectValue placeholder="Select subject..." />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border text-foreground">
+            {subjects.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Chapter</Label>
+        <Select value={form.chapter_id} onValueChange={(v) => setForm((f: any) => ({ ...f, chapter_id: v, topic_id: '' }))} disabled={!form.subject_id}>
+          <SelectTrigger className="bg-muted border-border text-foreground">
+            <SelectValue placeholder={form.subject_id ? 'Select chapter...' : 'Pick a subject first'} />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border text-foreground">
+            {chapters.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Topic</Label>
+        <Select value={form.topic_id} onValueChange={(v) => setForm((f: any) => ({ ...f, topic_id: v }))} disabled={!form.chapter_id}>
+          <SelectTrigger className="bg-muted border-border text-foreground">
+            <SelectValue placeholder={form.chapter_id ? 'Select topic...' : 'Pick a chapter first'} />
+          </SelectTrigger>
+          <SelectContent className="bg-card border-border text-foreground">
+            {topics.map((t) => (
+              <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Points</Label>
+        <Input type="number" value={form.points} onChange={(e) => setForm((f: any) => ({ ...f, points: parseInt(e.target.value) || 0 }))} className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
       </div>
       {form.question_type === 'mcq' && (
         <div className="space-y-3">
@@ -129,24 +163,44 @@ export default function AdminQuestions() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [dialog, setDialog] = useState<{ open: boolean; edit?: Question }>({ open: false });
-  const [form, setForm] = useState({ question_text: '', question_type: 'mcq' as Question['question_type'], difficulty: 1, points: 10, topic_id: '' });
+  const [form, setForm] = useState({ question_text: '', question_type: 'mcq' as Question['question_type'], difficulty: 1, points: 10, topic_id: '', subject_id: '', chapter_id: '' });
   const [options, setOptions] = useState<{ option_text: string; is_correct: boolean }[]>([{ option_text: '', is_correct: false }, { option_text: '', is_correct: false }]);
 
   const { data: questionsData, isLoading } = useQuery({
     queryKey: ['admin-questions'],
-    queryFn: () => adminApi.getQuestions().then((r) => r.data),
+    queryFn: async () => { const r = await adminApi.getQuestions(); return r.data.data || r.data; },
   });
 
-  const questions: Question[] = Array.isArray(questionsData) ? questionsData : (questionsData?.questions ?? []);
+  const questions: Question[] = questionsData?.data ?? [];
+
+  const { data: subjectsData } = useQuery({
+    queryKey: ['admin-subjects'],
+    queryFn: async () => { const r = await curriculumApi.getSubjects(); return r.data.data || r.data; },
+  });
+  const subjects: Subject[] = Array.isArray(subjectsData) ? subjectsData : [];
+
+  const { data: chaptersData } = useQuery({
+    queryKey: ['admin-question-chapters', form.subject_id],
+    queryFn: async () => { const r = await curriculumApi.getChapters(form.subject_id); return r.data.data || r.data; },
+    enabled: !!form.subject_id,
+  });
+  const chapters: Chapter[] = Array.isArray(chaptersData) ? chaptersData : [];
+
+  const { data: topicsData } = useQuery({
+    queryKey: ['admin-question-topics', form.chapter_id],
+    queryFn: async () => { const r = await curriculumApi.getTopics(form.chapter_id); return r.data.data || r.data; },
+    enabled: !!form.chapter_id,
+  });
+  const topics: Topic[] = Array.isArray(topicsData) ? topicsData : [];
 
   const createMutation = useMutation({
-    mutationFn: () => adminApi.createQuestion({ ...form, options: form.question_type === 'mcq' ? options : undefined }),
+    mutationFn: () => adminApi.createQuestion({ question_text: form.question_text, question_type: form.question_type, difficulty: form.difficulty, points: form.points, topic_id: form.topic_id, options: form.question_type === 'mcq' ? options : undefined }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-questions'] }); toast.success('Question created'); setDialog({ open: false }); },
     onError: () => toast.error('Failed to create question'),
   });
 
   const updateMutation = useMutation({
-    mutationFn: () => adminApi.updateQuestion(dialog.edit!.id, { ...form, options: form.question_type === 'mcq' ? options : undefined }),
+    mutationFn: () => adminApi.updateQuestion(dialog.edit!.id, { question_text: form.question_text, question_type: form.question_type, difficulty: form.difficulty, points: form.points, topic_id: form.topic_id, options: form.question_type === 'mcq' ? options : undefined }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-questions'] }); toast.success('Question updated'); setDialog({ open: false }); },
     onError: () => toast.error('Failed to update question'),
   });
@@ -159,11 +213,11 @@ export default function AdminQuestions() {
 
   const openDialog = (question?: Question) => {
     if (question) {
-      setForm({ question_text: question.question_text, question_type: question.question_type, difficulty: question.difficulty, points: question.points, topic_id: question.topic_id });
+      setForm({ question_text: question.question_text, question_type: question.question_type, difficulty: question.difficulty, points: question.points, topic_id: question.topic_id, subject_id: '', chapter_id: '' });
       setOptions(question.options?.map((o) => ({ option_text: o.option_text, is_correct: o.is_correct })) || []);
       setDialog({ open: true, edit: question });
     } else {
-      setForm({ question_text: '', question_type: 'mcq', difficulty: 1, points: 10, topic_id: '' });
+      setForm({ question_text: '', question_type: 'mcq', difficulty: 1, points: 10, topic_id: '', subject_id: '', chapter_id: '' });
       setOptions([{ option_text: '', is_correct: false }, { option_text: '', is_correct: false }]);
       setDialog({ open: true });
     }
@@ -172,6 +226,9 @@ export default function AdminQuestions() {
   const filtered = questions.filter(
     (q) => q.question_text.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const subjectMap = new Map<string, Subject>();
+  subjects.forEach((s) => subjectMap.set(s.id, s));
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
@@ -217,7 +274,7 @@ export default function AdminQuestions() {
                       <TableHead className="text-muted-foreground">Type</TableHead>
                       <TableHead className="text-muted-foreground">Difficulty</TableHead>
                       <TableHead className="text-muted-foreground">Points</TableHead>
-                      <TableHead className="text-muted-foreground">Topic</TableHead>
+                      <TableHead className="text-muted-foreground">Topic / Chapter / Subject</TableHead>
                       <TableHead className="text-muted-foreground text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -231,6 +288,9 @@ export default function AdminQuestions() {
                         board: 'warning',
                         true_false: 'destructive',
                       };
+                      const qTopic = (question as any).topics;
+                      const qChapter = qTopic?.chapters;
+                      const qSubject = subjectMap.get(qChapter?.subject_id);
                       return (
                         <TableRow key={question.id} className="border-border hover:bg-accent">
                           <TableCell className="text-foreground max-w-xs truncate">{question.question_text}</TableCell>
@@ -245,7 +305,12 @@ export default function AdminQuestions() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{question.points}</TableCell>
-                          <TableCell className="text-muted-foreground text-sm max-w-[120px] truncate">{question.topic_id}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm max-w-[220px] truncate">
+                            <span className="truncate block" title={qTopic ? `${qTopic.name} → ${qChapter?.name || '?'} → ${qSubject?.name || '?'}` : question.topic_id}>
+                              {qTopic?.name || question.topic_id.slice(0, 8) + '...'}
+                              {qChapter && <span className="text-xs ml-1 opacity-60">({qChapter.name})</span>}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openDialog(question)}>
@@ -262,7 +327,7 @@ export default function AdminQuestions() {
                   </TableBody>
                 </Table>
               </div>
-              )}
+            )}
           </CardContent>
         </Card>
       </motion.div>
@@ -275,10 +340,11 @@ export default function AdminQuestions() {
               {dialog.edit ? 'Update question details and options' : 'Create a new question for the question bank'}
             </DialogDescription>
           </DialogHeader>
-          <QuestionForm form={form} setForm={setForm} options={options} setOptions={setOptions} />
+          <QuestionForm form={form} setForm={setForm} options={options} setOptions={setOptions} subjects={subjects} chapters={chapters} topics={topics} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialog({ open: false })}>Cancel</Button>
-            <Button onClick={() => (dialog.edit ? updateMutation : createMutation).mutate()} disabled={createMutation.isPending || updateMutation.isPending}>
+            <Button onClick={() => (dialog.edit ? updateMutation : createMutation).mutate()} disabled={!form.topic_id || createMutation.isPending || updateMutation.isPending}>
+              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
               {dialog.edit ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>

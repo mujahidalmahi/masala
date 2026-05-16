@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+//import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Users, Plus, LogIn, DoorOpen, Globe, Lock, TrendingUp, Settings, Trash2 } from 'lucide-react';
 import { useAuthStore } from '@/store';
@@ -18,6 +18,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { FocusRoom } from '@/types';
+<<<<<<< HEAD
+=======
+import { Trash2 } from 'lucide-react';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useAuthStore } from '@/store';
+
+>>>>>>> badd103 (Fix rooms page hooks and socket issues)
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -30,6 +41,7 @@ const itemVariants = {
 };
 
 export default function RoomsPage() {
+  const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const currentUser = useAuthStore((s) => s.user);
   const [createOpen, setCreateOpen] = useState(false);
@@ -63,9 +75,23 @@ export default function RoomsPage() {
       setRoomName('');
     },
     onError: () => toast.error('Failed to create room'),
+    
   });
+<<<<<<< HEAD
 
   const router = useRouter();
+=======
+  const deleteRoomMutation = useMutation({
+  mutationFn: (roomId: string) => roomsApi.delete(roomId),
+  onSuccess: () => {
+    toast.success('Room deleted');
+    queryClient.invalidateQueries({ queryKey: ['rooms'] });
+  },
+  onError: () => toast.error('Failed to delete room'),
+});
+ 
+
+>>>>>>> badd103 (Fix rooms page hooks and socket issues)
 
   const joinMutation = useMutation({
     mutationFn: async (roomId: string) => {

@@ -11,6 +11,7 @@ import { roomsApi, sessionsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+<<<<<<< HEAD
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FocusRoom } from '@/types';
+=======
+import { Badge } from '@/components/ui/badge';
+/*import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';*/
+import { roomsApi } from '@/lib/api';
+import { useAuthStore } from '@/store';
+>>>>>>> badd103 (Fix rooms page hooks and socket issues)
 import { toast } from 'sonner';
 
 const STORAGE_KEY = (roomId: string) => `room_timer_${roomId}`;

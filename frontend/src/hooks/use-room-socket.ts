@@ -22,6 +22,7 @@ type RoomMessage = {
 };
 
 export function useRoomSocket(roomId: string | null) {
+  const [presenceVersion, setPresenceVersion] = useState(0);
   const token = useAuthStore((s) => s.token);
   const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);

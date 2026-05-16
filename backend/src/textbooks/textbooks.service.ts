@@ -89,10 +89,7 @@ export class TextbooksService {
       await this.supabase.storage().from('textbooks').remove([filePath]);
     }
 
-    const { error } = await this.supabase
-      .from('textbooks')
-      .delete()
-      .eq('id', textbookId);
+    const { error } = await this.supabase.from('textbooks').delete().eq('id', textbookId);
 
     if (error) throw new NotFoundException('Failed to delete textbook');
     return { message: 'Textbook deleted' };
@@ -110,10 +107,7 @@ export class TextbooksService {
 
     if (uploadError) throw new BadRequestException(`Upload failed: ${uploadError.message}`);
 
-    const { data: urlData } = await this.supabase
-      .storage()
-      .from('uploads')
-      .getPublicUrl(fileName);
+    const { data: urlData } = await this.supabase.storage().from('uploads').getPublicUrl(fileName);
 
     const { data, error } = await this.supabase
       .from('uploaded_files')
@@ -154,7 +148,10 @@ export class TextbooksService {
 
     if (!file) throw new NotFoundException('File not found');
 
-    await this.supabase.storage().from('uploads').remove([file.file_url.split('/').slice(-2).join('/')]);
+    await this.supabase
+      .storage()
+      .from('uploads')
+      .remove([file.file_url.split('/').slice(-2).join('/')]);
 
     await this.supabase.from('uploaded_files').delete().eq('id', fileId);
     return { message: 'File deleted' };

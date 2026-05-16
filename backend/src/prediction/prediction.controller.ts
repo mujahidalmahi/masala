@@ -8,26 +8,17 @@ export class PredictionController {
   constructor(private predictionService: PredictionService) {}
 
   @Get('performance')
-  getPrediction(
-    @CurrentUser() user: JwtPayload,
-    @Query('subject_id') subjectId?: string,
-  ) {
+  getPrediction(@CurrentUser() user: JwtPayload, @Query('subject_id') subjectId?: string) {
     return this.predictionService.getPerformancePrediction(user.sub, subjectId);
   }
 
   @Get()
-  getPredictions(
-    @CurrentUser() user: JwtPayload,
-    @Query('type') type?: string,
-  ) {
+  getPredictions(@CurrentUser() user: JwtPayload, @Query('type') type?: string) {
     return this.predictionService.getPredictions(user.sub, type);
   }
 
   @Get('mastery')
-  getMastery(
-    @CurrentUser() user: JwtPayload,
-    @Query('topic_id') topicId?: string,
-  ) {
+  getMastery(@CurrentUser() user: JwtPayload, @Query('topic_id') topicId?: string) {
     return this.predictionService.getMasterySnapshots(user.sub, topicId);
   }
 
@@ -37,10 +28,7 @@ export class PredictionController {
   }
 
   @Get('exam-readiness/:subjectId')
-  getExamReadiness(
-    @CurrentUser() user: JwtPayload,
-    @Param('subjectId') subjectId: string,
-  ) {
+  getExamReadiness(@CurrentUser() user: JwtPayload, @Param('subjectId') subjectId: string) {
     return this.predictionService.getExamReadiness(user.sub, subjectId);
   }
 }

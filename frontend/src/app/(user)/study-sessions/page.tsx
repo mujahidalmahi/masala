@@ -98,6 +98,7 @@ export default function StudySessionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['study-sessions'] });
       queryClient.invalidateQueries({ queryKey: ['study-sessions-stats'] });
+      window.dispatchEvent(new Event('focus'));
     },
     onError: () => toast.error('Failed to end session'),
   });
@@ -114,13 +115,19 @@ export default function StudySessionsPage() {
 
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (sessionIdRef.current && phaseRef.current === 'focus') {
-        navigator.sendBeacon(
-          `/api/study-sessions/${sessionIdRef.current}/end`,
-          new Blob([JSON.stringify({
-            ended_at: new Date().toISOString(),
-          })], { type: 'application/json' }),
-        );
+      const sid = sessionIdRef.current;
+      if (sid && phaseRef.current === 'focus') {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+        const token = localStorage.getItem('access_token');
+        fetch(`${apiBase}/api/study-sessions/${sid}/end`, {
+          method: 'PATCH',
+          keepalive: true,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ ended_at: new Date().toISOString() }),
+        });
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -379,11 +386,10 @@ export default function StudySessionsPage() {
                   {focusPresets.map((m) => (
                     <button key={m}
                       onClick={() => { if (phase === 'idle') { setFocusDuration(m); } }}
-                      className={`px-2 py-1 text-xs rounded-md border transition-all ${
-                        focusDuration === m && phase === 'idle'
+                      className={`px-2 py-1 text-xs rounded-md border transition-all ${focusDuration === m && phase === 'idle'
                           ? 'border-primary/40 bg-primary/10 text-primary font-semibold'
                           : 'border-border text-muted-foreground hover:border-muted-foreground'
-                      } ${phase !== 'idle' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        } ${phase !== 'idle' ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >{m}m</button>
                   ))}
                 </div>
@@ -393,11 +399,10 @@ export default function StudySessionsPage() {
                   {breakPresets.map((m) => (
                     <button key={m}
                       onClick={() => { if (phase === 'idle') { setBreakDuration(m); } }}
-                      className={`px-2 py-1 text-xs rounded-md border transition-all ${
-                        breakDuration === m && phase === 'idle'
+                      className={`px-2 py-1 text-xs rounded-md border transition-all ${breakDuration === m && phase === 'idle'
                           ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500 font-semibold'
                           : 'border-border text-muted-foreground hover:border-muted-foreground'
-                      } ${phase !== 'idle' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        } ${phase !== 'idle' ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >{m}m</button>
                   ))}
                 </div>
@@ -445,9 +450,8 @@ export default function StudySessionsPage() {
           <div className="flex items-center gap-1 px-3 pt-3 pb-2 overflow-x-auto">
             {statRanges.map((r) => (
               <button key={r.key} onClick={() => setStatRange(r.key)}
-                className={`px-3 py-1 text-xs rounded-md font-medium transition-all whitespace-nowrap ${
-                  statRange === r.key ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className={`px-3 py-1 text-xs rounded-md font-medium transition-all whitespace-nowrap ${statRange === r.key ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+                  }`}
               >{r.label}</button>
             ))}
           </div>

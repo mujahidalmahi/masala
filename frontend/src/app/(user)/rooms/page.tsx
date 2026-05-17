@@ -1,8 +1,8 @@
 'use client';
-import { useRouter } from 'next/navigation';
 
 import { useState } from 'react';
-//import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Users, Plus, LogIn, DoorOpen, Globe, Lock, TrendingUp, Settings, Trash2 } from 'lucide-react';
 import { useAuthStore } from '@/store';
@@ -19,16 +19,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner';
 import { FocusRoom } from '@/types';
 
-import { Trash2 } from 'lucide-react';
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from '@tanstack/react-query';
-import { useAuthStore } from '@/store';
-
-
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
@@ -40,9 +30,9 @@ const itemVariants = {
 };
 
 export default function RoomsPage() {
+  const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-  const currentUser = useAuthStore((s) => s.user);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editRoom, setEditRoom] = useState<FocusRoom | null>(null);
@@ -74,18 +64,7 @@ export default function RoomsPage() {
       setRoomName('');
     },
     onError: () => toast.error('Failed to create room'),
-    
   });
-  const deleteRoomMutation = useMutation({
-  mutationFn: (roomId: string) => roomsApi.delete(roomId),
-  onSuccess: () => {
-    toast.success('Room deleted');
-    queryClient.invalidateQueries({ queryKey: ['rooms'] });
-  },
-  onError: () => toast.error('Failed to delete room'),
-});
- 
-
 
   const joinMutation = useMutation({
     mutationFn: async (roomId: string) => {
@@ -178,7 +157,7 @@ export default function RoomsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="max-people">Max Participants</Label>
-                <Input id="max-people" type="number" min={2} max={20} value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} />
+                <Input id="max-people" type="number" min={2} max={200} value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} />
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="is-private" checked={isPrivate} onCheckedChange={(checked) => setIsPrivate(checked === true)} />
@@ -207,7 +186,7 @@ export default function RoomsPage() {
                       </CardTitle>
                       {room.is_private ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <Globe className="h-3.5 w-3.5 text-muted-foreground" />}
                     </div>
-                    <CardDescription className="text-xs capitalize">{room.room_type}</CardDescription>
+                    <CardDescription className="text-xs capitalize">{room.room_type?.replace(/_/g, ' ')}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col justify-between">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
@@ -275,7 +254,7 @@ export default function RoomsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-people">Max Participants</Label>
-              <Input id="edit-people" type="number" min={2} max={20} value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} />
+              <Input id="edit-people" type="number" min={2} max={200} value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} />
             </div>
             <div className="flex items-center gap-2">
               <Checkbox id="edit-private" checked={isPrivate} onCheckedChange={(checked) => setIsPrivate(checked === true)} />

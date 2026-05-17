@@ -11,7 +11,6 @@ import { roomsApi, sessionsApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-<<<<<<< HEAD
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,16 +18,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FocusRoom } from '@/types';
-=======
-import { Badge } from '@/components/ui/badge';
-/*import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';*/
-import { roomsApi } from '@/lib/api';
-import { useAuthStore } from '@/store';
->>>>>>> badd103 (Fix rooms page hooks and socket issues)
 import { toast } from 'sonner';
 
 const STORAGE_KEY = (roomId: string) => `room_timer_${roomId}`;
@@ -95,7 +84,7 @@ export default function RoomInteriorPage() {
       } else {
         localStorage.removeItem(STORAGE_KEY(roomId));
       }
-    } catch {}
+    } catch { }
   }, [roomId]);
 
   const persistTimer = (snapshot: TimerSnapshot) => {
@@ -127,7 +116,7 @@ export default function RoomInteriorPage() {
       sessionIdRef.current = sessionId;
       syncStore();
       if (sessionId) persistTimer({ startedAt: now, sessionId });
-    } catch {}
+    } catch { }
   };
 
   const endSession = async (elapsedSecs: number) => {
@@ -140,7 +129,9 @@ export default function RoomInteriorPage() {
       await sessionsApi.endSession(sid, {
         ended_at: new Date().toISOString(),
       });
-    } catch {}
+      // Trigger profile refresh so navbar XP updates immediately
+      window.dispatchEvent(new Event('focus'));
+    } catch { }
   };
 
   const endSessionFetch = () => {
@@ -255,7 +246,8 @@ export default function RoomInteriorPage() {
     if (sid) {
       try {
         await sessionsApi.endSession(sid, { ended_at: new Date().toISOString() });
-      } catch {}
+        window.dispatchEvent(new Event('focus'));
+      } catch { }
     }
     sessionIdRef.current = null;
     syncStore();
@@ -448,7 +440,7 @@ export default function RoomInteriorPage() {
           </Card>
         </div>
       </div>
-      </div>
+    </div>
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -467,8 +459,10 @@ export default function RoomInteriorPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="silent_focus">Silent Focus</SelectItem>
-                  <SelectItem value="study_group">Study Group</SelectItem>
+                  <SelectItem value="group_study">Group Study</SelectItem>
                   <SelectItem value="pomodoro">Pomodoro</SelectItem>
+                  <SelectItem value="exam_prep">Exam Prep</SelectItem>
+                  <SelectItem value="night_study">Night Study</SelectItem>
                 </SelectContent>
               </Select>
             </div>

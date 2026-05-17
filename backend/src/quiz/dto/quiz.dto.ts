@@ -13,11 +13,14 @@ export const CreateQuizSchema = z.object({
 });
 
 export const AutoGenerateQuizSchema = z.object({
-  subject_id: z.string().uuid(),
+  subject_id: z.string().uuid().optional(),
   chapter_id: z.string().uuid().optional().nullable(),
-  topic_id: z.string().uuid(),
+  topic_id: z.string().uuid().optional().nullable(),
   question_count: z.number().int().min(1).max(50).default(10),
-  quiz_type: z.enum(['practice', 'revision', 'topic_wise']).default('practice'),
+  quiz_type: z.string(),
+  difficulty: z.string().optional(),
+}).refine((d) => d.topic_id || d.chapter_id, {
+  message: 'Either topic_id or chapter_id is required',
 });
 
 export const SubmitAnswerSchema = z.object({

@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/shared/theme-toggle';
 import { useAuthStore } from '@/store';
 import { getInitials } from '@/lib/utils';
 
@@ -31,12 +32,12 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-xl px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur-xl px-4 sm:px-6 theme-transition">
       <Button
         variant="ghost"
         size="icon"
         onClick={onMenuClick}
-        className="text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground interactive-button"
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -44,6 +45,7 @@ export function DashboardNavbar({ onMenuClick }: NavbarProps) {
       <div className="flex-1" />
 
       <div className="flex items-center gap-2 sm:gap-3">
+        <ThemeToggle />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-accent">

@@ -3,17 +3,18 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors',
+  'inline-flex items-center rounded-2xl border-2 px-3 py-1 text-xs font-bold transition-all duration-200 uppercase tracking-wide shadow-sm hover:scale-105',
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground',
-        secondary: 'border-transparent bg-secondary text-secondary-foreground',
-        destructive: 'border-transparent bg-destructive text-destructive-foreground',
-        outline: 'text-foreground',
-        success: 'border-transparent bg-emerald-500/10 text-emerald-500',
-        warning: 'border-transparent bg-yellow-500/10 text-yellow-500',
-        info: 'border-transparent bg-blue-500/10 text-blue-500',
+        default: 'border-primary/30 bg-primary/10 text-primary shadow-glow-sm',
+        secondary: 'border-secondary/30 bg-secondary/10 text-secondary shadow-glow-sm',
+        destructive: 'border-destructive/30 bg-destructive/10 text-destructive',
+        outline: 'border-border bg-background text-foreground hover:bg-accent',
+        success: 'border-success/30 bg-success/10 text-success',
+        warning: 'border-warning/30 bg-warning/10 text-warning',
+        info: 'border-primary/30 bg-primary/10 text-primary',
+        gradient: 'border-transparent bg-gradient-to-r from-primary via-secondary to-accent text-white shadow-glow-md',
       },
     },
     defaultVariants: {

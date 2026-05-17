@@ -23,7 +23,7 @@ import { JwtPayload } from '../common/types';
 
 @Controller('api/quizzes')
 export class QuizController {
-  constructor(private quizService: QuizService) {}
+  constructor(private quizService: QuizService) { }
 
   @Post()
   createQuiz(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(CreateQuizSchema)) dto: CreateQuizDto) {
@@ -36,11 +36,19 @@ export class QuizController {
   }
 
   @Get()
-  getQuizzes(
-    @CurrentUser() user: JwtPayload,
-    @Query('subject_id') subjectId?: string,
-  ) {
+  getQuizzes(@CurrentUser() user: JwtPayload, @Query('subject_id') subjectId?: string) {
     return this.quizService.getQuizzes(user.sub, subjectId);
+  }
+
+  // Static routes MUST come before @Get(':id')
+  @Get('attempts')
+  getAttemptHistory(@CurrentUser() user: JwtPayload) {
+    return this.quizService.getAttemptHistory(user.sub);
+  }
+
+  @Get('attempts/:id')
+  getAttempt(@CurrentUser() user: JwtPayload, @Param('id') attemptId: string) {
+    return this.quizService.getAttempt(attemptId, user.sub);
   }
 
   @Get(':id')
@@ -54,26 +62,12 @@ export class QuizController {
   }
 
   @Post('attempts/:id/answer')
-  submitAnswer(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') attemptId: string,
-    @Body(new ZodValidationPipe(SubmitAnswerSchema)) dto: SubmitAnswerDto,
-  ) {
+  submitAnswer(@CurrentUser() user: JwtPayload, @Param('id') attemptId: string, @Body(new ZodValidationPipe(SubmitAnswerSchema)) dto: SubmitAnswerDto) {
     return this.quizService.submitAnswer(user.sub, attemptId, dto);
   }
 
   @Post('attempts/:id/submit')
   submitAttempt(@CurrentUser() user: JwtPayload, @Param('id') attemptId: string) {
     return this.quizService.submitAttempt(user.sub, attemptId);
-  }
-
-  @Get('attempts')
-  getAttemptHistory(@CurrentUser() user: JwtPayload) {
-    return this.quizService.getAttemptHistory(user.sub);
-  }
-
-  @Get('attempts/:id')
-  getAttempt(@CurrentUser() user: JwtPayload, @Param('id') attemptId: string) {
-    return this.quizService.getAttempt(attemptId, user.sub);
   }
 }

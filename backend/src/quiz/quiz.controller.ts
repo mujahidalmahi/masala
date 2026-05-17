@@ -32,15 +32,18 @@ export class QuizController {
 
   @Post('generate')
   autoGenerate(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(AutoGenerateQuizSchema)) dto: AutoGenerateQuizDto) {
-    return this.quizService.generateQuizWithAI(user.sub, dto);
+    return this.quizService.autoGenerateQuiz(user.sub, dto);
   }
 
   @Get()
-  getQuizzes(@CurrentUser() user: JwtPayload, @Query('subject_id') subjectId?: string) {
+  getQuizzes(
+    @CurrentUser() user: JwtPayload,
+    @Query('subject_id') subjectId?: string,
+  ) {
     return this.quizService.getQuizzes(user.sub, subjectId);
   }
 
-  // Static routes MUST come before @Get(':id')
+  // Static routes MUST come before @Get(':id') to avoid NestJS matching 'attempts' as :id
   @Get('attempts')
   getAttemptHistory(@CurrentUser() user: JwtPayload) {
     return this.quizService.getAttemptHistory(user.sub);
@@ -62,7 +65,11 @@ export class QuizController {
   }
 
   @Post('attempts/:id/answer')
-  submitAnswer(@CurrentUser() user: JwtPayload, @Param('id') attemptId: string, @Body(new ZodValidationPipe(SubmitAnswerSchema)) dto: SubmitAnswerDto) {
+  submitAnswer(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') attemptId: string,
+    @Body(new ZodValidationPipe(SubmitAnswerSchema)) dto: SubmitAnswerDto,
+  ) {
     return this.quizService.submitAnswer(user.sub, attemptId, dto);
   }
 

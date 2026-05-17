@@ -14,9 +14,6 @@ export interface AppConfig {
   cors: {
     origin: string;
   };
-  puppeteer: {
-    executablePath: string;
-  };
   upload: {
     maxFileSize: number;
     dir: string;
@@ -38,9 +35,6 @@ export const configuration = (): AppConfig => ({
   },
   cors: {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  },
-  puppeteer: {
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '',
   },
   upload: {
     maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10),

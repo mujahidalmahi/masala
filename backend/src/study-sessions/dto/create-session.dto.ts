@@ -14,6 +14,7 @@ export const CreateSessionSchema = z.object({
 export const EndSessionSchema = z.object({
   ended_at: z.string().datetime(),
   notes: z.string().max(2000).optional().nullable(),
+  duration_minutes: z.number().int().min(1).optional(),
 });
 
 export type CreateSessionDto = z.infer<typeof CreateSessionSchema>;

@@ -14,7 +14,9 @@ import { RoomsService } from './rooms.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+      : ['http://localhost:3000'],
     credentials: true,
   },
   namespace: '/ws/rooms',
@@ -55,25 +57,44 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.disconnect();
     }
   }
+async handleDisconnect(client: Socket) {
+  const userId = client.data.userId;
+  if (!userId) return;
 
-  handleDisconnect(client: Socket) {
-    const userId = client.data.userId;
-    if (!userId) return;
-
-    this.roomUserMap.forEach((users, roomId) => {
-      if (users.has(userId)) {
-        users.delete(userId);
-        if (users.size === 0) this.roomUserMap.delete(roomId);
-        this.server.to(roomId).emit('participant_left', { userId });
-      }
-    });
-
-    const sockets = this.userSocketMap.get(userId);
-    if (sockets) {
-      sockets.delete(client.id);
-      if (sockets.size === 0) this.userSocketMap.delete(userId);
-    }
+  // Remove this socket first. If the user still has other active sockets
+  // (e.g., reconnecting after page refresh), don't leave rooms — the new
+  // socket is already there. This prevents a race where the old disconnect
+  // handler leaves a room that the new socket just joined.
+  const sockets = this.userSocketMap.get(userId);
+  if (sockets) {
+    sockets.delete(client.id);
+    if (sockets.size > 0) return;
+    this.userSocketMap.delete(userId);
   }
+
+  // No more sockets for this user — leave all rooms
+  const roomsToLeave: string[] = [];
+  this.roomUserMap.forEach((users, roomId) => {
+    if (users.has(userId)) roomsToLeave.push(roomId);
+  });
+
+  for (const roomId of roomsToLeave) {
+    const users = this.roomUserMap.get(roomId);
+    if (!users) continue;
+
+    users.delete(userId);
+    if (users.size === 0) this.roomUserMap.delete(roomId);
+
+    try {
+      await this.roomsService.leaveRoom(userId, roomId);
+    } catch (err) {
+      this.logger.error(`Failed to leave room ${roomId} on disconnect`, err);
+    }
+
+    this.server.to(roomId).emit('participant_left', { userId });
+    this.server.to(roomId).emit('participant_count', { count: users.size });
+  }
+}
 
   @SubscribeMessage('join_room')
   async handleJoinRoom(
@@ -139,11 +160,9 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const userId = client.data.userId;
 
-    this.server.to(data.room_id).emit('new_message', {
-      user_id: userId,
-      message: data.message,
-      created_at: new Date().toISOString(),
-    });
+    const saved = await this.roomsService.saveMessage(userId, data.room_id, data.message);
+
+    this.server.to(data.room_id).emit('new_message', saved);
   }
 
   @SubscribeMessage('focus_update')
@@ -153,10 +172,27 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     const userId = client.data.userId;
 
-    await this.roomsService.updateFocusMinutes(userId, data.room_id, data.focus_minutes);
+    try {
+      await this.roomsService.updateFocusMinutes(userId, data.room_id, data.focus_minutes);
+    } catch (error) {
+      client.emit('error', { message: (error as Error).message });
+      return;
+    }
 
     this.server.to(data.room_id).emit('focus_updated', {
       userId,
+      focus_minutes: data.focus_minutes,
+    });
+  }
+
+  @SubscribeMessage('focus_tick')
+  handleFocusTick(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { room_id: string; focus_minutes: number },
+  ) {
+    // Lightweight broadcast — no DB write
+    this.server.to(data.room_id).emit('focus_tick_updated', {
+      userId: client.data.userId,
       focus_minutes: data.focus_minutes,
     });
   }

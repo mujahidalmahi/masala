@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -16,7 +16,7 @@ export class RoutineService {
 
     if (error) {
       this.logger.error(`Failed to generate routine: ${error.message}`);
-      throw new Error('Failed to generate routine');
+      throw new InternalServerErrorException('Failed to generate routine');
     }
 
     return data;
@@ -51,7 +51,7 @@ export class RoutineService {
       .single();
 
     if (!slot || slot.user_routines?.user_id !== userId) {
-      throw new Error('Slot not found');
+      throw new NotFoundException('Slot not found');
     }
 
     await this.supabase

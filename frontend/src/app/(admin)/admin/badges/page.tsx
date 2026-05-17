@@ -44,7 +44,7 @@ export default function AdminBadges() {
 
   const { data: badgesData, isLoading } = useQuery({
     queryKey: ['admin-badges'],
-    queryFn: () => gamificationApi.getAllBadges().then((r) => r.data),
+    queryFn: async () => { const r = await gamificationApi.getAllBadges(); return r.data.data || r.data; },
   });
 
   const badges: BadgeType[] = Array.isArray(badgesData) ? badgesData : (badgesData?.badges ?? []);

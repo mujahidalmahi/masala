@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { configuration } from './config/configuration';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
@@ -27,6 +28,11 @@ import { HealthController } from './health.controller';
       load: [configuration],
       envFilePath: '.env',
     }),
+    ThrottlerModule.forRoot([{
+      name: 'api',
+      ttl: 60000,
+      limit: 100,
+    }]),
     SupabaseModule,
     AuthModule,
     UsersModule,
@@ -44,6 +50,7 @@ import { HealthController } from './health.controller';
   controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],

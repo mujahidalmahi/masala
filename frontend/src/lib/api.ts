@@ -20,6 +20,7 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && typeof window !== 'undefined' && !isAuthRoute) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
+      document.cookie = 'access_token=; path=/; max-age=0';
       window.location.href = '/login';
     }
     return Promise.reject(err);
@@ -99,6 +100,8 @@ export const roomsApi = {
   create: (data: any) => api.post('/api/rooms', data),
   getActive: (type?: string) => api.get('/api/rooms', { params: { type } }),
   getOne: (id: string) => api.get(`/api/rooms/${id}`),
+  update: (id: string, data: any) => api.patch(`/api/rooms/${id}`, data),
+  delete: (id: string) => api.delete(`/api/rooms/${id}`),
   join: (id: string) => api.post(`/api/rooms/${id}/join`),
   leave: (id: string) => api.post(`/api/rooms/${id}/leave`),
   getParticipants: (id: string) => api.get(`/api/rooms/${id}/participants`),
@@ -142,7 +145,7 @@ export const routinesApi = {
 // ─── Textbooks ────────────────────────────────────
 export const textbooksApi = {
   upload: (data: FormData) =>
-    api.post('/api/textbooks/upload', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post('/api/textbooks/upload', data, { headers: { 'Content-Type': undefined } }),
   getAll: () => api.get('/api/textbooks'),
   delete: (id: string) => api.delete(`/api/textbooks/${id}`),
 };
@@ -150,7 +153,7 @@ export const textbooksApi = {
 // ─── Files ────────────────────────────────────────
 export const filesApi = {
   upload: (data: FormData) =>
-    api.post('/api/files/upload', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post('/api/files/upload', data, { headers: { 'Content-Type': undefined } }),
   getAll: () => api.get('/api/files'),
   delete: (id: string) => api.delete(`/api/files/${id}`),
 };
@@ -185,6 +188,10 @@ export const adminApi = {
 
   // Stats
   getStats: () => api.get('/api/admin/stats'),
+
+  // Rooms
+  toggleRoom: (id: string) => api.patch(`/api/admin/rooms/${id}/toggle`),
+
 };
 
 export default api;

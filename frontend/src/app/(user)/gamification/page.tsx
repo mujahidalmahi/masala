@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   Zap, Flame, Trophy, Award, Medal, Target, BadgeCheck,
-  TrendingUp, Star, Crown, Swords,
+  TrendingUp, Crown, Swords,
 } from 'lucide-react';
+import { useAuthStore } from '@/store';
 import { gamificationApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,7 @@ const itemVariants = {
 };
 
 export default function GamificationPage() {
+  const currentUser = useAuthStore((s) => s.user);
   const { data: profile, isLoading: profileLoading, error: profileError } = useQuery<GamificationProfile>({
     queryKey: ['gamification-profile'],
     queryFn: async () => {
@@ -155,7 +157,7 @@ export default function GamificationPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xl sm:text-2xl font-bold text-foreground">
-                  {leaderboard?.find((e) => e.user_id === profile?.level_id?.toString())?.rank || '-'}
+                  {leaderboard?.find((e) => e.user_id === currentUser?.id)?.rank || '-'}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">On leaderboard</p>
               </CardContent>
@@ -224,65 +226,63 @@ export default function GamificationPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="leaderboard">
-          {leaderboard && leaderboard.length > 0 ? (
-            <Card className="bg-card border-border">
-              <ScrollArea className="max-h-96">
-                <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-border">
-                      <TableHead className="w-12">Rank</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead className="text-right">Level</TableHead>
-                      <TableHead className="text-right">XP</TableHead>
-                      <TableHead className="text-right">Streak</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leaderboard.map((entry) => (
-                      <TableRow key={entry.user_id} className="border-border">
-                        <TableCell className="font-medium">
-                          {entry.rank <= 3 ? (
-                            <span className="flex items-center gap-1">
-                              {entry.rank === 1 ? <Crown className="h-4 w-4 text-yellow-500" /> : null}
-                              {entry.rank === 2 ? <Medal className="h-4 w-4 text-muted-foreground" /> : null}
-                              {entry.rank === 3 ? <Medal className="h-4 w-4 text-amber-600" /> : null}
-                              {entry.rank}
-                            </span>
-                          ) : (
-                            entry.rank
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={entry.avatar_url || undefined} />
-                              <AvatarFallback className="text-[10px]">
-                                {getInitials(entry.display_name || entry.username || 'U')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm text-foreground">{entry.display_name || entry.username}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="secondary" className="text-xs">Lv.{entry.level_id}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right text-sm text-foreground">{entry.xp_total.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">
-                          <span className="flex items-center justify-end gap-1 text-sm">
-                            <Flame className="h-3 w-3 text-orange-500" />
-                            {entry.current_streak}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                </div>
-              </ScrollArea>
-            </Card>
-          ) : (
+      <TabsContent value="leaderboard">
+  {leaderboard && leaderboard.length > 0 ? (
+    <Card className="bg-card border-border overflow-hidden">
+      <ScrollArea className="h-[500px] w-full">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border">
+              <TableHead className="w-12">Rank</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead className="text-right">Level</TableHead>
+              <TableHead className="text-right">XP</TableHead>
+              <TableHead className="text-right">Streak</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {leaderboard.map((entry) => (
+              <TableRow key={entry.user_id} className="border-border">
+                <TableCell className="font-medium">
+                  {entry.rank <= 3 ? (
+                    <span className="flex items-center gap-1">
+                      {entry.rank === 1 ? <Crown className="h-4 w-4 text-yellow-500" /> : null}
+                      {entry.rank === 2 ? <Medal className="h-4 w-4 text-muted-foreground" /> : null}
+                      {entry.rank === 3 ? <Medal className="h-4 w-4 text-amber-600" /> : null}
+                      {entry.rank}
+                    </span>
+                  ) : (
+                    entry.rank
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={entry.avatar_url || undefined} />
+                      <AvatarFallback className="text-[10px]">
+                        {getInitials(entry.display_name || entry.username || 'U')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-foreground">{entry.display_name || entry.username}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Badge variant="secondary" className="text-xs">Lv.{entry.level_id}</Badge>
+                </TableCell>
+                <TableCell className="text-right text-sm text-foreground">{entry.xp_total.toLocaleString()}</TableCell>
+                <TableCell className="text-right">
+                  <span className="flex items-center justify-end gap-1 text-sm">
+                    <Flame className="h-3 w-3 text-orange-500" />
+                    {entry.current_streak}
+                  </span>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+    </Card>
+  ) : (
             <Card className="bg-card border-border">
               <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Medal className="h-10 w-10 mb-3" />

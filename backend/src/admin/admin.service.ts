@@ -18,19 +18,30 @@ export class AdminService {
 
   async getStats(userId: string) {
     await this.requireAdmin(userId);
-    const [users, subjects, questions, badges, sessions] = await Promise.all([
-      this.supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    const today = new Date().toISOString().split('T')[0];
+    const [users, subjects, questions, badges, sessions, quizzes, activeUsers, recentSessions] = await Promise.all([
+      this.supabase.from('profiles').select('id', { count: 'exact', head: true }).neq('role', 'admin'),
       this.supabase.from('subjects').select('id', { count: 'exact', head: true }),
       this.supabase.from('questions').select('id', { count: 'exact', head: true }),
       this.supabase.from('badges').select('id', { count: 'exact', head: true }),
       this.supabase.from('study_sessions').select('id', { count: 'exact', head: true }),
+      this.supabase.from('quizzes').select('id', { count: 'exact', head: true }),
+      this.supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('last_study_date', today).neq('role', 'admin'),
+      this.supabase.from('study_sessions').select('id, created_at, session_type, profiles(display_name, username)').order('created_at', { ascending: false }).limit(5),
     ]);
     return {
       total_users: users.count || 0,
+      active_today: activeUsers.count || 0,
       total_subjects: subjects.count || 0,
+      total_quizzes: quizzes.count || 0,
       total_questions: questions.count || 0,
       total_badges: badges.count || 0,
       total_sessions: sessions.count || 0,
+      recent_activity: (recentSessions.data || []).map((s: any) => ({
+        id: s.id,
+        message: `${s.profiles?.display_name || s.profiles?.username || 'A user'} started a ${s.session_type} session`,
+        created_at: s.created_at,
+      })),
     };
   }
 
@@ -41,7 +52,8 @@ export class AdminService {
 
     let query = this.supabase
       .from('profiles')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .neq('role', 'admin');
 
     if (search) {
       query = query.or(`display_name.ilike.%${search}%,email.ilike.%${search}%,username.ilike.%${search}%`);
@@ -85,24 +97,46 @@ export class AdminService {
     return { message: 'User deleted successfully' };
   }
 
-  async createSubject(data: { name: string; description?: string; icon?: string; color?: string }) {
+  async createSubject(data: { name: string; description?: string; icon?: string; color?: string; grade_id?: string }) {
+    const { grade_id, ...subjectData } = data;
     const { data: subject, error } = await this.supabase
       .from('subjects')
-      .insert(data)
+      .insert(subjectData)
       .select()
       .single();
     if (error) throw new NotFoundException('Failed to create subject');
+
+    if (grade_id) {
+      const { error: gsError } = await this.supabase
+        .from('grade_subjects')
+        .insert({ grade_id, subject_id: subject.id });
+      if (gsError) throw new NotFoundException('Failed to link grade');
+    }
+
     return subject;
   }
 
   async updateSubject(id: string, data: any) {
+    const { grade_id, ...subjectData } = data;
     const { data: subject, error } = await this.supabase
       .from('subjects')
-      .update(data)
+      .update(subjectData)
       .eq('id', id)
       .select()
       .single();
     if (error) throw new NotFoundException('Subject not found');
+
+    if (grade_id) {
+      await this.supabase
+        .from('grade_subjects')
+        .delete()
+        .eq('subject_id', id);
+      const { error: gsError } = await this.supabase
+        .from('grade_subjects')
+        .insert({ grade_id, subject_id: id });
+      if (gsError) throw new NotFoundException('Failed to update grade link');
+    }
+
     return subject;
   }
 
@@ -256,4 +290,20 @@ export class AdminService {
     if (error) throw new NotFoundException('Failed to delete badge');
     return { message: 'Badge deleted successfully' };
   }
+
+  async toggleRoom(roomId: string) {
+    const { data: room } = await this.supabase
+      .from('focus_rooms')
+      .select('is_active')
+      .eq('id', roomId)
+      .single();
+    if (!room) throw new NotFoundException('Room not found');
+    const { error } = await this.supabase
+      .from('focus_rooms')
+      .update({ is_active: !room.is_active })
+      .eq('id', roomId);
+    if (error) throw new NotFoundException('Failed to toggle room');
+    return { is_active: !room.is_active };
+  }
+
 }

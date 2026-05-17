@@ -45,13 +45,20 @@ export class GamificationService {
   }
 
   async getBadges(userId: string) {
-    const { data } = await this.supabase
-      .from('user_badges')
-      .select('*, badges(*)')
-      .eq('user_id', userId);
+  const { data } = await this.supabase
+    .from('user_badges')
+    .select('*, badges(*)')
+    .eq('user_id', userId);
 
-    return data || [];
-  }
+  // Flatten the nested `badges` join into the row so the frontend can
+  // access `name`, `rarity`, etc. directly. Without this flatten, every
+  // badge card on the gamification page renders with undefined fields.
+  return (data || []).map((row: any) => ({
+    ...row.badges,
+    earned_at: row.earned_at,
+    user_badge_id: row.id,
+  }));
+}
 
   async getAllBadges() {
     const { data } = await this.supabase

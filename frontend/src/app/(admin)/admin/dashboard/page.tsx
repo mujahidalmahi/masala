@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Users, Activity, ClipboardList, Clock, ArrowRight, BookOpen, FileQuestion, Award, Settings } from 'lucide-react';
+import { Users, Activity, ClipboardList, Clock, ArrowRight, BookOpen, FileQuestion, Award } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,17 +28,16 @@ const statCards = [
 ];
 
 const quickLinks = [
-  { label: 'Manage Users', href: '/users', icon: Users },
-  { label: 'Curriculum', href: '/curriculum', icon: BookOpen },
-  { label: 'Questions Bank', href: '/questions', icon: FileQuestion },
-  { label: 'Badges', href: '/badges', icon: Award },
-  { label: 'Settings', href: '/settings', icon: Settings },
+  { label: 'Manage Users', href: '/admin/users', icon: Users },
+  { label: 'Curriculum', href: '/admin/curriculum', icon: BookOpen },
+  { label: 'Questions Bank', href: '/admin/questions', icon: FileQuestion },
+  { label: 'Badges', href: '/admin/badges', icon: Award },
 ];
 
 export default function AdminDashboard() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
-    queryFn: () => adminApi.getStats().then((r) => r.data),
+    queryFn: async () => { const r = await adminApi.getStats(); return r.data.data || r.data; },
   });
 
   return (

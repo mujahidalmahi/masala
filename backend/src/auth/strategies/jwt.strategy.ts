@@ -21,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: JwtPayload) {
     const { data: profile, error } = await this.supabase
       .from('profiles')
-      .select('id, username, display_name, avatar_url, xp_total, level_id, current_streak')
+      .select('id, username, display_name, avatar_url, xp_total, level_id, current_streak, role')
       .eq('id', payload.sub)
       .single();
 
@@ -38,6 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       xp_total: profile.xp_total,
       level_id: profile.level_id,
       current_streak: profile.current_streak,
+      role: profile.role,
     };
   }
 }

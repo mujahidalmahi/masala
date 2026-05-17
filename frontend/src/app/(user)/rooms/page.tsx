@@ -1,9 +1,11 @@
 'use client';
+import { useRouter } from 'next/navigation';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+//import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Users, Plus, LogIn, DoorOpen, Globe, Lock, TrendingUp } from 'lucide-react';
+import { Users, Plus, LogIn, DoorOpen, Globe, Lock, TrendingUp, Settings, Trash2 } from 'lucide-react';
+import { useAuthStore } from '@/store';
 import { roomsApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +19,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner';
 import { FocusRoom } from '@/types';
 
+import { Trash2 } from 'lucide-react';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useAuthStore } from '@/store';
+
+
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
@@ -28,10 +40,14 @@ const itemVariants = {
 };
 
 export default function RoomsPage() {
+  const currentUser = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editRoom, setEditRoom] = useState<FocusRoom | null>(null);
   const [roomName, setRoomName] = useState('');
-  const [roomType, setRoomType] = useState('focus');
+  const [roomType, setRoomType] = useState('silent_focus');
   const [maxParticipants, setMaxParticipants] = useState(5);
   const [isPrivate, setIsPrivate] = useState(false);
 
@@ -58,15 +74,59 @@ export default function RoomsPage() {
       setRoomName('');
     },
     onError: () => toast.error('Failed to create room'),
+    
   });
+  const deleteRoomMutation = useMutation({
+  mutationFn: (roomId: string) => roomsApi.delete(roomId),
+  onSuccess: () => {
+    toast.success('Room deleted');
+    queryClient.invalidateQueries({ queryKey: ['rooms'] });
+  },
+  onError: () => toast.error('Failed to delete room'),
+});
+ 
+
 
   const joinMutation = useMutation({
-    mutationFn: (roomId: string) => roomsApi.join(roomId),
-    onSuccess: () => {
-      toast.success('Joined room!');
+    mutationFn: async (roomId: string) => {
+      await roomsApi.join(roomId);
+      return roomId;
+    },
+    onSuccess: (roomId) => {
+      toast.success('Joining room...');
+      router.push(`/rooms/${roomId}`);
     },
     onError: () => toast.error('Failed to join room'),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (roomId: string) => roomsApi.delete(roomId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      toast.success('Room deleted');
+    },
+    onError: () => toast.error('Failed to delete room'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => roomsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      toast.success('Room updated!');
+      setEditOpen(false);
+      setEditRoom(null);
+    },
+    onError: () => toast.error('Failed to update room'),
+  });
+
+  const openEdit = (room: FocusRoom) => {
+    setEditRoom(room);
+    setRoomName(room.name);
+    setRoomType(room.room_type);
+    setMaxParticipants(room.max_participants);
+    setIsPrivate(room.is_private);
+    setEditOpen(true);
+  };
 
   if (isLoading) return <RoomsSkeleton />;
   if (error) {
@@ -101,50 +161,30 @@ export default function RoomsPage() {
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label htmlFor="room-name">Room Name</Label>
-                <Input
-                  id="room-name"
-                  placeholder="e.g. Math Study Group"
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                />
+                <Input id="room-name" placeholder="e.g. Math Study Group" value={roomName} onChange={(e) => setRoomName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="room-type">Type</Label>
                 <Select value={roomType} onValueChange={setRoomType}>
-                  <SelectTrigger id="room-type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
+                  <SelectTrigger id="room-type"><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="focus">Focus</SelectItem>
+                    <SelectItem value="silent_focus">Silent Focus</SelectItem>
                     <SelectItem value="pomodoro">Pomodoro</SelectItem>
-                    <SelectItem value="discussion">Discussion</SelectItem>
+                    <SelectItem value="group_study">Group Study</SelectItem>
+                    <SelectItem value="exam_prep">Exam Prep</SelectItem>
+                    <SelectItem value="night_study">Night Study</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="max-people">Max Participants</Label>
-                <Input
-                  id="max-people"
-                  type="number"
-                  min={2}
-                  max={20}
-                  value={maxParticipants}
-                  onChange={(e) => setMaxParticipants(Number(e.target.value))}
-                />
+                <Input id="max-people" type="number" min={2} max={20} value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} />
               </div>
               <div className="flex items-center gap-2">
-                <Checkbox
-                  id="is-private"
-                  checked={isPrivate}
-                  onCheckedChange={(checked) => setIsPrivate(checked === true)}
-                />
+                <Checkbox id="is-private" checked={isPrivate} onCheckedChange={(checked) => setIsPrivate(checked === true)} />
                 <Label htmlFor="is-private">Private room</Label>
               </div>
-              <Button
-                className="w-full"
-                onClick={() => createMutation.mutate()}
-                disabled={!roomName.trim() || createMutation.isPending}
-              >
+              <Button className="w-full" onClick={() => createMutation.mutate()} disabled={!roomName.trim() || createMutation.isPending}>
                 {createMutation.isPending ? 'Creating...' : 'Create Room'}
               </Button>
             </div>
@@ -153,55 +193,47 @@ export default function RoomsPage() {
       </div>
 
       {rooms && rooms.length > 0 ? (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"
-        >
-          {rooms.map((room) => (
-            <motion.div key={room.id} variants={itemVariants}>
-              <Card className="bg-card border-border h-full flex flex-col">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base text-foreground flex items-center gap-2">
-                      <DoorOpen className="h-4 w-4 text-blue-500" />
-                      {room.name}
-                    </CardTitle>
-                    {room.is_private ? (
-                      <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                    ) : (
-                      <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+          {rooms.map((room) => {
+            const isCreator = currentUser?.id === room.created_by;
+            return (
+              <motion.div key={room.id} variants={itemVariants}>
+                <Card className="bg-card border-border h-full flex flex-col">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base text-foreground flex items-center gap-2">
+                        <DoorOpen className="h-4 w-4 text-blue-500" />
+                        {room.name}
+                      </CardTitle>
+                      {room.is_private ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : <Globe className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </div>
+                    <CardDescription className="text-xs capitalize">{room.room_type}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                      <Users className="h-4 w-4" />
+                      <span>{room.current_count} / {room.max_participants} participants</span>
+                      {room.subjects?.name && <><span className="text-muted-foreground">|</span><span>{room.subjects.name}</span></>}
+                    </div>
+                    {isCreator && (
+                      <div className="flex gap-2 mb-2">
+                        <Button variant="outline" size="sm" className="flex-1 gap-1 text-xs h-7" onClick={() => openEdit(room)}>
+                          <Settings className="h-3 w-3" /> Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" className="flex-1 gap-1 text-xs h-7" onClick={() => { if (confirm('Delete this room?')) deleteMutation.mutate(room.id); }} disabled={deleteMutation.isPending}>
+                          <Trash2 className="h-3 w-3" /> Delete
+                        </Button>
+                      </div>
                     )}
-                  </div>
-                  <CardDescription className="text-xs capitalize">
-                    {room.room_type}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col justify-between">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                    <Users className="h-4 w-4" />
-                    <span>{room.current_count} / {room.max_participants} participants</span>
-                    {room.subjects?.name && (
-                      <>
-                        <span className="text-muted-foreground">|</span>
-                        <span>{room.subjects.name}</span>
-                      </>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => joinMutation.mutate(room.id)}
-                    disabled={joinMutation.isPending || room.current_count >= room.max_participants}
-                  >
-                    <LogIn className="h-4 w-4" />
-                    {room.current_count >= room.max_participants ? 'Full' : 'Join Room'}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                    <Button variant="outline" className="w-full gap-2" onClick={() => joinMutation.mutate(room.id)} disabled={joinMutation.isPending || room.current_count >= room.max_participants}>
+                      <LogIn className="h-4 w-4" />
+                      {room.current_count >= room.max_participants ? 'Full' : 'Join Room'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
         </motion.div>
       ) : (
         <Card className="bg-card border-border">
@@ -216,6 +248,51 @@ export default function RoomsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={(o) => { if (!o) { setEditOpen(false); setEditRoom(null); } }}>
+        <DialogContent className="p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle>Edit Room</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Room Name</Label>
+              <Input id="edit-name" placeholder="Room name" value={roomName} onChange={(e) => setRoomName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-type">Type</Label>
+              <Select value={roomType} onValueChange={setRoomType}>
+                <SelectTrigger id="edit-type"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="silent_focus">Silent Focus</SelectItem>
+                  <SelectItem value="pomodoro">Pomodoro</SelectItem>
+                  <SelectItem value="group_study">Group Study</SelectItem>
+                  <SelectItem value="exam_prep">Exam Prep</SelectItem>
+                  <SelectItem value="night_study">Night Study</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-people">Max Participants</Label>
+              <Input id="edit-people" type="number" min={2} max={20} value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="edit-private" checked={isPrivate} onCheckedChange={(checked) => setIsPrivate(checked === true)} />
+              <Label htmlFor="edit-private">Private room</Label>
+            </div>
+            <Button className="w-full" onClick={() => {
+              if (!editRoom) return;
+              updateMutation.mutate({
+                id: editRoom.id,
+                data: { name: roomName, room_type: roomType, max_participants: maxParticipants, is_private: isPrivate },
+              });
+            }} disabled={!roomName.trim() || updateMutation.isPending}>
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -2,15 +2,24 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { FileQuestion, Play, Clock, CheckCircle, XCircle, BarChart3, TrendingUp } from 'lucide-react';
-import { quizzesApi } from '@/lib/api';
+import { useState } from 'react';
+import { Plus, Play, Clock, CheckCircle, XCircle, BarChart3, TrendingUp, Sparkles, Loader2, FileQuestion } from 'lucide-react';
+import { quizzesApi, curriculumApi } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { getDifficultyLabel, formatDate, formatPercentage } from '@/lib/utils';
 import { toast } from 'sonner';
-import { Quiz, QuizAttempt } from '@/types';
+import { Quiz, QuizAttempt, Subject, Chapter, Topic } from '@/types';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -24,6 +33,8 @@ const itemVariants = {
 
 export default function QuizzesPage() {
   const queryClient = useQueryClient();
+  const [genOpen, setGenOpen] = useState(false);
+  const [genForm, setGenForm] = useState({ subject_id: '', chapter_id: '', topic_id: '', quiz_type: 'practice', question_count: 10 });
 
   const { data: quizzes, isLoading: quizzesLoading, error: quizzesError } = useQuery({
     queryKey: ['quizzes'],
@@ -41,6 +52,35 @@ export default function QuizzesPage() {
     },
   });
 
+  const { data: subjectsData } = useQuery({
+    queryKey: ['user-subjects'],
+    queryFn: async () => {
+      const res = await curriculumApi.getSubjects();
+      return (res.data.data || res.data) as Subject[];
+    },
+  });
+  const subjects: Subject[] = Array.isArray(subjectsData) ? subjectsData : [];
+
+  const { data: chaptersData } = useQuery({
+    queryKey: ['gen-chapters', genForm.subject_id],
+    queryFn: async () => {
+      const res = await curriculumApi.getChapters(genForm.subject_id);
+      return (res.data.data || res.data) as Chapter[];
+    },
+    enabled: !!genForm.subject_id,
+  });
+  const chapters: Chapter[] = Array.isArray(chaptersData) ? chaptersData : [];
+
+  const { data: topicsData } = useQuery({
+    queryKey: ['gen-topics', genForm.chapter_id],
+    queryFn: async () => {
+      const res = await curriculumApi.getTopics(genForm.chapter_id);
+      return (res.data.data || res.data) as Topic[];
+    },
+    enabled: !!genForm.chapter_id,
+  });
+  const topics: Topic[] = Array.isArray(topicsData) ? topicsData : [];
+
   const startMutation = useMutation({
     mutationFn: (quizId: string) => quizzesApi.startAttempt({ quiz_id: quizId }),
     onSuccess: () => {
@@ -48,6 +88,20 @@ export default function QuizzesPage() {
       toast.success('Quiz started!');
     },
     onError: () => toast.error('Failed to start quiz'),
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => quizzesApi.generate({
+      topic_id: genForm.topic_id,
+      question_count: genForm.question_count,
+      quiz_type: genForm.quiz_type,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quizzes'] });
+      toast.success('Quiz generated!');
+      setGenOpen(false);
+    },
+    onError: () => toast.error('Failed to generate quiz'),
   });
 
   if (quizzesLoading || attemptsLoading) return <QuizzesSkeleton />;
@@ -69,9 +123,15 @@ export default function QuizzesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Quizzes</h1>
-        <p className="text-muted-foreground mt-1">Test your knowledge and track your progress.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Quizzes</h1>
+          <p className="text-muted-foreground mt-1">Test your knowledge and track your progress.</p>
+        </div>
+        <Button onClick={() => setGenOpen(true)} className="gap-2 w-full sm:w-auto">
+          <Sparkles className="h-4 w-4" />
+          Generate Quiz
+        </Button>
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
@@ -111,7 +171,9 @@ export default function QuizzesPage() {
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold text-foreground mb-3">Available Quizzes</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-semibold text-foreground">Available Quizzes</h2>
+        </div>
         {quizzes && quizzes.length > 0 ? (
           <motion.div
             variants={containerVariants}
@@ -164,7 +226,11 @@ export default function QuizzesPage() {
             <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <FileQuestion className="h-10 w-10 mb-3" />
               <p className="text-lg font-medium">No quizzes available</p>
-              <p className="text-sm mt-1">Generate or create a quiz to get started.</p>
+              <p className="text-sm mt-1">Generate a quiz from your curriculum to get started.</p>
+              <Button className="mt-4 gap-2" onClick={() => setGenOpen(true)}>
+                <Sparkles className="h-4 w-4" />
+                Generate Quiz
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -207,6 +273,84 @@ export default function QuizzesPage() {
           </Card>
         </div>
       )}
+
+      <Dialog open={genOpen} onOpenChange={(o) => !o && setGenOpen(false)}>
+        <DialogContent className="bg-card border-border text-foreground max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Quiz</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Pick a topic and we will pull questions from the bank automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Select value={genForm.subject_id} onValueChange={(v) => setGenForm({ ...genForm, subject_id: v, chapter_id: '', topic_id: '' })}>
+                <SelectTrigger className="bg-muted border-border text-foreground">
+                  <SelectValue placeholder="Select subject..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  {subjects.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Chapter</Label>
+              <Select value={genForm.chapter_id} onValueChange={(v) => setGenForm({ ...genForm, chapter_id: v, topic_id: '' })} disabled={!genForm.subject_id}>
+                <SelectTrigger className="bg-muted border-border text-foreground">
+                  <SelectValue placeholder={genForm.subject_id ? 'Select chapter...' : 'Pick a subject first'} />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  {chapters.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Topic</Label>
+              <Select value={genForm.topic_id} onValueChange={(v) => setGenForm({ ...genForm, topic_id: v })} disabled={!genForm.chapter_id}>
+                <SelectTrigger className="bg-muted border-border text-foreground">
+                  <SelectValue placeholder={genForm.chapter_id ? 'Select topic...' : 'Pick a chapter first'} />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  {topics.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Quiz Type</Label>
+                <Select value={genForm.quiz_type} onValueChange={(v) => setGenForm({ ...genForm, quiz_type: v })}>
+                  <SelectTrigger className="bg-muted border-border text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border text-foreground">
+                    <SelectItem value="practice">Practice</SelectItem>
+                    <SelectItem value="revision">Revision</SelectItem>
+                    <SelectItem value="topic_wise">Topic Wise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Questions</Label>
+                <Input type="number" min={1} max={50} value={genForm.question_count} onChange={(e) => setGenForm({ ...genForm, question_count: parseInt(e.target.value) || 10 })} className="bg-muted border-border text-foreground" />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenOpen(false)}>Cancel</Button>
+            <Button onClick={() => generateMutation.mutate()} disabled={!genForm.topic_id || generateMutation.isPending}>
+              {generateMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

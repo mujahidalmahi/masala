@@ -39,7 +39,7 @@ export default function AdminCurriculum() {
 
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [chapterDialog, setChapterDialog] = useState<{ open: boolean; edit?: Chapter }>({ open: false });
-  const [chapterForm, setChapterForm] = useState({ name: '', description: '', display_order: 1 });
+  const [chapterForm, setChapterForm] = useState({ name: '', description: '', display_order: 1, grade_id: '' });
 
   const [selectedChapterId, setSelectedChapterId] = useState('');
   const [topicDialog, setTopicDialog] = useState<{ open: boolean; edit?: Topic }>({ open: false });
@@ -47,29 +47,30 @@ export default function AdminCurriculum() {
 
   const { data: gradesData } = useQuery({
     queryKey: ['curriculum-grades'],
-    queryFn: () => curriculumApi.getGrades().then((r) => r.data),
+    queryFn: async () => { const r = await curriculumApi.getGrades(); return r.data.data || r.data; },
   });
-  const grades: any[] = Array.isArray(gradesData) ? gradesData : (gradesData?.grades ?? []);
+  const grades: any[] = Array.isArray(gradesData) ? gradesData : [];
+  const gradeMap = Object.fromEntries(grades.map((g: any) => [g.id, g.name || g.grade_name || g.level]));
 
   const { data: subjectsData, isLoading: subjectsLoading } = useQuery({
     queryKey: ['admin-subjects'],
-    queryFn: () => curriculumApi.getSubjects().then((r) => r.data),
+    queryFn: async () => { const r = await curriculumApi.getSubjects(); return r.data.data || r.data; },
   });
-  const subjects: Subject[] = Array.isArray(subjectsData) ? subjectsData : (subjectsData?.subjects ?? []);
+  const subjects: Subject[] = Array.isArray(subjectsData) ? subjectsData : [];
 
   const { data: chaptersData, isLoading: chaptersLoading } = useQuery({
     queryKey: ['admin-chapters', selectedSubjectId],
-    queryFn: () => curriculumApi.getChapters(selectedSubjectId).then((r) => r.data),
+    queryFn: async () => { const r = await curriculumApi.getChapters(selectedSubjectId); return r.data.data || r.data; },
     enabled: !!selectedSubjectId,
   });
-  const chapters: Chapter[] = Array.isArray(chaptersData) ? chaptersData : (chaptersData?.chapters ?? []);
+  const chapters: Chapter[] = Array.isArray(chaptersData) ? chaptersData : [];
 
   const { data: topicsData, isLoading: topicsLoading } = useQuery({
     queryKey: ['admin-topics', selectedChapterId],
-    queryFn: () => curriculumApi.getTopics(selectedChapterId).then((r) => r.data),
+    queryFn: async () => { const r = await curriculumApi.getTopics(selectedChapterId); return r.data.data || r.data; },
     enabled: !!selectedChapterId,
   });
-  const topics: Topic[] = Array.isArray(topicsData) ? topicsData : (topicsData?.topics ?? []);
+  const topics: Topic[] = Array.isArray(topicsData) ? topicsData : [];
 
   const createSubject = useMutation({
     mutationFn: () => adminApi.createSubject(subjectForm),
@@ -88,7 +89,7 @@ export default function AdminCurriculum() {
   });
 
   const createChapter = useMutation({
-    mutationFn: () => adminApi.createChapter({ ...chapterForm, subject_id: selectedSubjectId, grade_id: subjectForm.grade_id || undefined }),
+    mutationFn: () => adminApi.createChapter({ ...chapterForm, subject_id: selectedSubjectId }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-chapters'] }); toast.success('Chapter created'); setChapterDialog({ open: false }); },
     onError: () => toast.error('Failed to create chapter'),
   });
@@ -121,10 +122,10 @@ export default function AdminCurriculum() {
 
   const openChapterDialog = (chapter?: Chapter) => {
     if (chapter) {
-      setChapterForm({ name: chapter.name, description: chapter.description ?? '', display_order: chapter.display_order });
+      setChapterForm({ name: chapter.name, description: chapter.description ?? '', display_order: chapter.display_order, grade_id: chapter.grade_id });
       setChapterDialog({ open: true, edit: chapter });
     } else {
-      setChapterForm({ name: '', description: '', display_order: chapters.length + 1 });
+      setChapterForm({ name: '', description: '', display_order: chapters.length + 1, grade_id: '' });
       setChapterDialog({ open: true });
     }
   };
@@ -234,6 +235,7 @@ export default function AdminCurriculum() {
                                 <p className="text-foreground font-medium text-sm">{chapter.name}</p>
                                 <p className="text-muted-foreground text-xs">Order: {chapter.display_order}{chapter.description ? ` — ${chapter.description}` : ''}</p>
                               </div>
+                              <Badge variant="outline" className="text-xs bg-muted/50">{gradeMap[chapter.grade_id] || 'Unknown'}</Badge>
                             </div>
                             <div className="flex items-center gap-2">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => openChapterDialog(chapter)}>
@@ -394,6 +396,19 @@ export default function AdminCurriculum() {
             <div className="space-y-2">
               <Label>Display Order</Label>
               <Input type="number" value={chapterForm.display_order} onChange={(e) => setChapterForm((f) => ({ ...f, display_order: parseInt(e.target.value) || 1 }))} className="bg-muted border-border text-foreground placeholder:text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <Label>Grade</Label>
+              <Select value={chapterForm.grade_id} onValueChange={(v) => setChapterForm((f) => ({ ...f, grade_id: v }))}>
+                <SelectTrigger className="bg-muted border-border text-foreground">
+                  <SelectValue placeholder="Select grade..." />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground">
+                  {grades.map((g: any) => (
+                    <SelectItem key={g.id} value={g.id}>{g.name || g.grade_name || g.level}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

@@ -32,7 +32,7 @@ export class QuizController {
 
   @Post('generate')
   autoGenerate(@CurrentUser() user: JwtPayload, @Body(new ZodValidationPipe(AutoGenerateQuizSchema)) dto: AutoGenerateQuizDto) {
-    return this.quizService.autoGenerateQuiz(user.sub, dto);
+    return this.quizService.generateQuizWithAI(user.sub, dto);
   }
 
   @Get()
